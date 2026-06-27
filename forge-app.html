@@ -834,6 +834,70 @@ body {
   </div>
 </div>
 
+<!-- ═══════════ ONBOARDING ═══════════ -->
+<div id="screen-onboarding" class="screen" style="align-items:center;justify-content:center;padding:24px;">
+  <div style="max-width:440px;width:100%;text-align:center;">
+
+    <!-- Logo -->
+    <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:var(--purple2);margin-bottom:40px;">⬡ FIRMZ</div>
+
+    <!-- Welcome badge -->
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 16px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);border-radius:100px;font-size:13px;font-weight:700;color:#10b981;margin-bottom:24px;">
+      ✓ Compte créé avec succès
+    </div>
+
+    <!-- Heading -->
+    <h1 style="font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1.15;margin-bottom:12px;">
+      Bienvenue sur<br><span style="background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Firmz</span> ✦
+    </h1>
+    <p style="color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:36px;">
+      Tu décris ton idée. L'IA construit ta société,<br>lance le site, et gère la croissance.
+    </p>
+
+    <!-- Credits callout -->
+    <div style="background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(79,70,229,.1));border:1px solid rgba(124,58,237,.3);border-radius:16px;padding:20px;margin-bottom:32px;display:flex;align-items:center;gap:16px;text-align:left;">
+      <div style="font-size:36px;line-height:1;">💎</div>
+      <div>
+        <div style="font-size:17px;font-weight:800;margin-bottom:2px;">3 crédits offerts</div>
+        <div style="font-size:13px;color:var(--muted);">Chaque société coûte 3 💎 — tu peux en créer une maintenant, gratuitement.</div>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div style="display:flex;flex-direction:column;gap:0;margin-bottom:36px;text-align:left;">
+      <div class="ob-step" style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
+        <div style="width:32px;height:32px;background:rgba(124,58,237,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--purple2);flex-shrink:0;">1</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:2px;">Décris ton idée</div>
+          <div style="font-size:13px;color:var(--muted);">Une phrase suffit. Ex : "Une app qui génère des factures automatiquement."</div>
+        </div>
+      </div>
+      <div class="ob-step" style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
+        <div style="width:32px;height:32px;background:rgba(6,182,212,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--cyan);flex-shrink:0;">2</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:2px;">L'IA forge ta société</div>
+          <div style="font-size:13px;color:var(--muted);">Nom, site web, stratégie, pitch — tout est généré en quelques secondes.</div>
+        </div>
+      </div>
+      <div class="ob-step" style="display:flex;gap:14px;padding:14px 0;">
+        <div style="width:32px;height:32px;background:rgba(16,185,129,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--green);flex-shrink:0;">3</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:2px;">Tu parles à ton CEO</div>
+          <div style="font-size:13px;color:var(--muted);">Ton AI CEO gère le reste : emails, ventes, croissance.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <button class="btn btn-primary btn-full btn-xl" onclick="startOnboarding()" style="margin-bottom:12px;font-size:16px;font-weight:800;">
+      ⚡ Forger ma première société →
+    </button>
+    <button class="btn btn-ghost btn-full" onclick="skipOnboarding()" style="font-size:13px;">
+      Explorer d'abord
+    </button>
+  </div>
+</div>
+
 <!-- ═══════════ HOME ═══════════ -->
 <div id="screen-home" class="screen">
   <div class="home-nav">
@@ -2154,12 +2218,25 @@ async function submitAuth() {
     localStorage.setItem('firmz_session', sessionKey);
     localStorage.setItem('firmz_email', userEmail);
     updateCredits();
-    show('screen-home');
-    showAchievement('👋', authMode === 'signup' ? 'Compte créé ! 3 💎 offerts' : 'Bon retour !');
+    if (authMode === 'signup') {
+      show('screen-onboarding');
+    } else {
+      show('screen-home');
+      showAchievement('👋', 'Bon retour !');
+    }
   } catch (err) {
     showAuthError('Erreur réseau — réessaie');
     if (btn) { btn.textContent = authMode === 'login' ? 'Se connecter →' : 'Créer mon compte →'; btn.disabled = false; }
   }
+}
+
+function startOnboarding() {
+  show('screen-create');
+}
+
+function skipOnboarding() {
+  show('screen-home');
+  showAchievement('💎', '3 crédits offerts — prêt à forger !');
 }
 
 async function restoreSession() {
