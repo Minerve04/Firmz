@@ -386,7 +386,11 @@ async function deployToVercel(slug, html) {
   const projectName = `${slug}-${Date.now().toString(36)}`.slice(0, 52);
   const htmlB64 = Buffer.from(html).toString('base64');
 
-  const res = await fetch('https://api.vercel.com/v13/deployments', {
+  // Support team accounts — add ?teamId= if VERCEL_TEAM_ID is set
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const apiUrl = `https://api.vercel.com/v13/deployments${teamId ? `?teamId=${teamId}` : ''}`;
+
+  const res = await fetch(apiUrl, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
