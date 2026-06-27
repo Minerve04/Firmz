@@ -1344,6 +1344,66 @@ app.get('/api/company/:id', async (req, res) => {
   res.json(safe);
 });
 
+// ── SITE EDITOR — apply a natural-language change instruction ──
+app.post('/api/site/:companyId/edit', requireAuth, async (req, res) => {
+  const { instruction } = req.body;
+  if (!instruction?.trim()) return res.status(400).json({ error: 'instruction required' });
+  try {
+    let company = await dbGetCompany(req.params.companyId);
+    if (!company) return res.status(404).json({ error: 'Not found' });
+    if (company.founderEmail !== req.userEmail) return res.status(403).json({ error: 'Forbidden' });
+
+    const client = getAnthropic();
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{ role: 'user', content:
+`You are editing a SaaS landing page. The user gave this instruction: "${instruction}"
+
+Current company fields:
+- name: ${company.name}
+- tagline: ${company.tagline}
+- description: ${company.description}
+- color (primary hex): ${company.color}
+- color_secondary (hex): ${company.color_secondary}
+- hero_title (if set): ${company.hero_title || company.tagline}
+- cta_text (if set): ${company.cta_text || 'Get started free'}
+- pain: ${company.pain}
+- value_prop: ${company.value_prop}
+
+Return ONLY a JSON object of the fields to UPDATE (only include fields that change). Allowed keys: tagline, description, hero_title, cta_text, color, color_secondary, pain, value_prop, font_heading, font_body.
+Example: {"tagline": "new tagline", "color": "#ff5500"}
+If the instruction is unclear or out of scope, return {}.`
+      }],
+    });
+
+    const raw = msg.content[0].text;
+    const updates = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+    if (Object.keys(updates).length === 0) {
+      return res.json({ success: true, changed: [], note: 'No changes detected from instruction' });
+    }
+
+    // Apply updates
+    company = { ...company, ...updates };
+    await dbSetCompany(req.params.companyId, company.founderEmail, company);
+
+    // Regenerate & redeploy
+    let siteUrl = company.siteUrl;
+    if (process.env.VERCEL_TOKEN) {
+      try {
+        const html = generateLandingHTML(company, null);
+        const dep = await deployToVercel(company.slug, html);
+        if (dep?.url) { siteUrl = dep.url; company = { ...company, siteUrl }; await dbSetCompany(req.params.companyId, company.founderEmail, company); }
+      } catch(e) { console.error('[site-edit] vercel redeploy failed:', e.message); }
+    }
+
+    res.json({ success: true, changed: Object.keys(updates), updates, siteUrl });
+  } catch(e) {
+    console.error('[site-edit]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── DOWNLOAD LANDING PAGE HTML ──
 app.get('/api/company/:id/html', async (req, res) => {
   const company = await dbGetCompany(req.params.id);

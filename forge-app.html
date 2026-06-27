@@ -731,6 +731,23 @@ body {
 .bar-lbl { font-size: 10px; color: var(--dim); }
 
 /* add company card */
+.site-chip {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  color: var(--muted);
+  border-radius: 99px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  font-family: inherit;
+}
+.site-chip:hover {
+  background: rgba(124,58,237,.15);
+  border-color: rgba(124,58,237,.4);
+  color: #c4b5fd;
+}
 .add-company-cta {
   background: linear-gradient(135deg,rgba(124,58,237,.08),rgba(6,182,212,.05));
   border: 1px dashed rgba(124,58,237,.3); border-radius: var(--r);
@@ -1330,10 +1347,40 @@ body {
 
     <!-- OVERVIEW -->
     <div class="tab-content active" id="tc-overview">
-      <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;">
-        <span style="font-size:18px;">🚀</span>
-        <span>Your company was just launched — analytics will appear here as your AI agents work. Check back in 24h.</span>
+
+      <!-- ── SITE EDITOR ── -->
+      <div id="site-editor-card" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:20px;margin-bottom:18px;">
+        <!-- Header row -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(124,58,237,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🌐</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:800;color:white;margin-bottom:2px;">Ton site</div>
+            <a id="site-edit-url" href="#" target="_blank" style="font-size:12px;color:var(--purple2);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;">—</a>
+          </div>
+          <a id="site-visit-btn" href="#" target="_blank" style="flex-shrink:0;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:var(--purple2);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">Visiter ↗</a>
+        </div>
+
+        <!-- Quick chips -->
+        <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;" id="site-chips">
+          <button class="site-chip" onclick="fillSiteEdit('Change the main headline to: ')">✏️ Titre</button>
+          <button class="site-chip" onclick="fillSiteEdit('Change the tagline to: ')">💬 Tagline</button>
+          <button class="site-chip" onclick="fillSiteEdit('Change the CTA button text to: ')">🎯 Bouton CTA</button>
+          <button class="site-chip" onclick="fillSiteEdit('Change the primary color to: ')">🎨 Couleur</button>
+          <button class="site-chip" onclick="fillSiteEdit('Update the pain point description to: ')">🔥 Pain point</button>
+          <button class="site-chip" onclick="fillSiteEdit('Change the value proposition to: ')">⚡ Value prop</button>
+        </div>
+
+        <!-- Input -->
+        <div style="display:flex;gap:10px;align-items:flex-end;">
+          <textarea id="site-edit-input" rows="2" placeholder='Décris le changement… ex: "Change the headline to Stop chasing clients" ou "Make the primary color green"'
+            style="flex:1;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 14px;color:var(--text);font-size:13px;resize:none;font-family:inherit;line-height:1.5;outline:none;transition:border .15s;"
+            onfocus="this.style.borderColor='rgba(124,58,237,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.1)'"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();applySiteEdit();}"></textarea>
+          <button onclick="applySiteEdit()" id="site-edit-btn" class="btn btn-primary btn-sm" style="flex-shrink:0;height:44px;padding:0 18px;white-space:nowrap;">Appliquer →</button>
+        </div>
+        <div id="site-edit-status" style="font-size:12px;color:var(--dim);margin-top:8px;min-height:16px;"></div>
       </div>
+
       <div class="kpi-row">
         <div class="kpi">
           <div class="kpi-label">Revenue (30d)</div>
@@ -1708,7 +1755,15 @@ function goCreateWithIdea() {
   if (val) document.getElementById('idea-textarea').value = val;
   goCreate();
 }
-function goDashboard() { show('screen-dashboard'); buildChart(); startDashFeed(); loadDashboardData(); }
+function goDashboard() { show('screen-dashboard'); buildChart(); startDashFeed(); loadDashboardData(); initSiteEditorCard(); }
+
+function initSiteEditorCard() {
+  const url = currentSiteUrl || currentCompanyData?.siteUrl;
+  const urlEl = document.getElementById('site-edit-url');
+  const visitBtn = document.getElementById('site-visit-btn');
+  if (url && urlEl) { urlEl.textContent = url; urlEl.href = url; }
+  if (url && visitBtn) { visitBtn.href = url; }
+}
 
 async function loadDashboardData() {
   if (!currentCompanyId) return;
@@ -2439,6 +2494,58 @@ async function saveAgentConfig() {
 function closeConfigModal() {
   document.getElementById('agent-config-modal').style.display = 'none';
   agentConfigType = null;
+}
+
+/* ═══════════════ SITE EDITOR ═══════════════ */
+function fillSiteEdit(prefix) {
+  const inp = document.getElementById('site-edit-input');
+  if (!inp) return;
+  inp.value = prefix;
+  inp.focus();
+  inp.setSelectionRange(inp.value.length, inp.value.length);
+}
+
+async function applySiteEdit() {
+  const inp = document.getElementById('site-edit-input');
+  const btn = document.getElementById('site-edit-btn');
+  const status = document.getElementById('site-edit-status');
+  const instruction = inp?.value?.trim();
+  if (!instruction || !currentCompanyId) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ En cours…';
+  if (status) status.textContent = 'Claude modifie ton site…';
+
+  try {
+    const r = await authFetch(API + '/api/site/' + currentCompanyId + '/edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instruction }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      const changedList = d.changed?.length ? d.changed.join(', ') : 'aucun champ';
+      if (status) status.innerHTML = `<span style="color:#10b981">✓ Modifié : ${changedList}${d.siteUrl ? ' — <a href="'+d.siteUrl+'" target="_blank" style="color:var(--purple2)">Voir le site ↗</a>' : ''}</span>`;
+      if (d.siteUrl) {
+        const urlEl = document.getElementById('site-edit-url');
+        const visitBtn = document.getElementById('site-visit-btn');
+        if (urlEl) { urlEl.textContent = d.siteUrl; urlEl.href = d.siteUrl; }
+        if (visitBtn) visitBtn.href = d.siteUrl;
+      }
+      inp.value = '';
+      // Update currentCompanyData if available
+      if (currentCompanyData && d.updates) Object.assign(currentCompanyData, d.updates);
+    } else {
+      if (status) status.innerHTML = `<span style="color:#f59e0b">⚠ ${d.note || d.error || 'Aucun changement détecté'}</span>`;
+    }
+  } catch(e) {
+    if (e.message !== 'session_expired') {
+      if (status) status.innerHTML = `<span style="color:#ef4444">Erreur : ${e.message}</span>`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Appliquer →';
+  }
 }
 
 /* ═══════════════ DAILY REPORT ═══════════════ */
