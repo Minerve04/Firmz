@@ -1514,53 +1514,81 @@ body {
 
 <!-- ═══════════ ACCOUNT SCREEN ═══════════ -->
 <div id="screen-account" class="screen" style="display:none;background:var(--bg);min-height:100vh;padding:0;">
-  <div style="max-width:640px;margin:0 auto;padding:32px 20px 60px;">
+  <div style="max-width:640px;margin:0 auto;padding:28px 20px 80px;">
     <!-- Header -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:36px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;">
       <button onclick="show(accountBackScreen||'screen-home')" style="background:rgba(255,255,255,.07);border:none;color:var(--text);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">←</button>
       <span class="logo" style="font-size:18px;">⬡ FIRMZ</span>
+      <button onclick="logout()" style="margin-left:auto;background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.25);color:#ff6b6b;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;">Déconnexion</button>
     </div>
-    <!-- Avatar + email -->
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:32px;">
-      <div id="acct-avatar" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;flex-shrink:0;">?</div>
-      <div>
-        <div id="acct-email" style="font-size:17px;font-weight:700;letter-spacing:-0.3px;">loading…</div>
-        <div style="font-size:13px;color:var(--muted);margin-top:3px;">Firmz account</div>
-      </div>
-      <button onclick="logout()" style="margin-left:auto;background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.25);color:#ff6b6b;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;">Log out</button>
-    </div>
-    <!-- Credits card -->
-    <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:22px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">Current balance</div>
-          <div style="font-size:36px;font-weight:900;letter-spacing:-1px;line-height:1;">💎 <span id="acct-credits">–</span></div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px;"><span id="acct-credits-spent">0</span> credits used so far</div>
+
+    <!-- Hero profile card -->
+    <div style="background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(167,139,250,.08));border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:28px;margin-bottom:16px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(124,58,237,.2),transparent);border-radius:50%;"></div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+        <div id="acct-avatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:#fff;flex-shrink:0;border:3px solid rgba(167,139,250,.4);">?</div>
+        <div style="flex:1;min-width:0;">
+          <div id="acct-name" style="font-size:20px;font-weight:900;letter-spacing:-0.5px;margin-bottom:2px;">…</div>
+          <div id="acct-email" style="font-size:13px;color:var(--muted);">…</div>
+          <div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);border-radius:99px;padding:3px 10px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:#a78bfa;display:inline-block;"></span>
+            <span style="font-size:11px;font-weight:700;color:#a78bfa;" id="acct-plan">Free</span>
+          </div>
         </div>
-        <button onclick="openBuyCredits()" style="background:linear-gradient(135deg,var(--purple),var(--purple2));border:none;color:#fff;border-radius:12px;padding:12px 20px;cursor:pointer;font-size:14px;font-weight:800;">+ Buy credits</button>
       </div>
-      <div style="height:6px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;">
-        <div id="acct-credit-bar" style="height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));border-radius:99px;transition:width .4s;width:50%;"></div>
+      <!-- Stats row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div style="background:rgba(0,0,0,.25);border-radius:12px;padding:12px;text-align:center;">
+          <div id="acct-credits" style="font-size:24px;font-weight:900;color:#a78bfa;">–</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">💎 Crédits</div>
+        </div>
+        <div style="background:rgba(0,0,0,.25);border-radius:12px;padding:12px;text-align:center;">
+          <div id="acct-company-count" style="font-size:24px;font-weight:900;">0</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">🏢 Sociétés</div>
+        </div>
+        <div style="background:rgba(0,0,0,.25);border-radius:12px;padding:12px;text-align:center;">
+          <div id="acct-credits-spent" style="font-size:24px;font-weight:900;">0</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">⚡ Utilisés</div>
+        </div>
       </div>
     </div>
-    <!-- Stats row -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;">
-      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
-        <div id="acct-company-count" style="font-size:28px;font-weight:900;">0</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Companies built</div>
+
+    <!-- Credits card -->
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:18px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;">Solde de crédits</div>
+        <button onclick="openBuyCredits()" style="background:linear-gradient(135deg,var(--purple),var(--purple2));border:none;color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:700;">+ Acheter</button>
       </div>
-      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-size:28px;font-weight:900;">💎 3</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Cost per company</div>
+      <div style="height:8px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;">
+        <div id="acct-credit-bar" style="height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));border-radius:99px;transition:width .5s;width:30%;"></div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">Chaque société coûte 💎 3 crédits</div>
+    </div>
+
+    <!-- Member since -->
+    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:18px;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:3px;">Membre depuis</div>
+          <div id="acct-member-since" style="font-size:14px;font-weight:700;">–</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:3px;">Email</div>
+          <div id="acct-email2" style="font-size:13px;font-weight:600;color:var(--purple2);">–</div>
+        </div>
       </div>
     </div>
+
     <!-- My companies -->
     <div style="margin-bottom:24px;">
-      <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;margin-bottom:12px;">My companies</div>
-      <div id="acct-companies-list"><div style="color:var(--muted);font-size:14px;text-align:center;padding:32px 0;">Loading…</div></div>
+      <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;margin-bottom:12px;">Mes sociétés</div>
+      <div id="acct-companies-list">
+        <div style="color:var(--muted);font-size:14px;text-align:center;padding:32px 0;">Chargement…</div>
+      </div>
     </div>
+
     <!-- CTA -->
-    <button class="btn btn-primary btn-full btn-lg" onclick="show('screen-home');setTimeout(goCreate,100);" style="font-size:15px;font-weight:800;">⚡ Build another company →</button>
+    <button class="btn btn-primary btn-full btn-lg" onclick="show('screen-home');setTimeout(goCreate,100);" style="font-size:15px;font-weight:800;">⚡ Créer une nouvelle société →</button>
   </div>
 </div>
 
@@ -2372,14 +2400,17 @@ function skipOnboarding() {
 async function restoreSession() {
   if (!sessionKey) return false;
   try {
-    const r = await fetch(API + '/api/auth/me', { headers: { 'x-session-key': sessionKey } });
-    if (!r.ok) { sessionKey = ''; localStorage.removeItem('firmz_session'); return false; }
+    const r = await authFetch(API + '/api/auth/me');
+    if (!r.ok) return false;
     const data = await r.json();
     userEmail = data.email;
-    credits = data.credits;
+    credits = typeof data.credits === 'number' ? data.credits : credits;
     updateCredits();
     return true;
-  } catch { return false; }
+  } catch(e) {
+    if (e.message === 'session_expired') return false;
+    return false;
+  }
 }
 
 function logout() {
@@ -2396,36 +2427,54 @@ async function openAccount(backScreen) {
   accountBackScreen = backScreen || 'screen-home';
   show('screen-account');
   // pre-fill from current state while fetching
-  document.getElementById('acct-avatar').textContent = userEmail ? userEmail[0].toUpperCase() : '?';
+  const initials = userEmail ? userEmail[0].toUpperCase() : '?';
+  const displayName = userEmail ? userEmail.split('@')[0] : '…';
+  document.getElementById('acct-avatar').textContent = initials;
+  document.getElementById('acct-name').textContent = displayName;
   document.getElementById('acct-email').textContent = userEmail || '…';
+  document.getElementById('acct-email2').textContent = userEmail || '…';
   document.getElementById('acct-credits').textContent = credits;
   try {
     const r = await authFetch(API + '/api/account');
     if (!r.ok) return;
     const d = await r.json();
     credits = d.credits;
+    userEmail = d.email;
     updateCredits();
+
+    const name = d.email.split('@')[0];
     document.getElementById('acct-avatar').textContent = d.email[0].toUpperCase();
+    document.getElementById('acct-name').textContent = name.charAt(0).toUpperCase() + name.slice(1);
     document.getElementById('acct-email').textContent = d.email;
+    document.getElementById('acct-email2').textContent = d.email;
     document.getElementById('acct-credits').textContent = d.credits;
-    document.getElementById('acct-credits-spent').textContent = d.creditsSpent;
-    document.getElementById('acct-company-count').textContent = d.companiesCount;
-    // credit bar: show remaining vs a "nice" max
-    const maxCredits = Math.max(d.credits + d.creditsSpent, 10);
-    document.getElementById('acct-credit-bar').style.width = Math.round((d.credits / maxCredits) * 100) + '%';
-    // companies list
+    document.getElementById('acct-credits-spent').textContent = d.creditsSpent || 0;
+    document.getElementById('acct-company-count').textContent = d.companiesCount || 0;
+    document.getElementById('acct-plan').textContent = d.credits > 30 ? 'Pro' : 'Free';
+
+    // Member since — use createdAt if available, else today
+    const since = d.createdAt ? new Date(d.createdAt).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }) : 'Aujourd\'hui';
+    document.getElementById('acct-member-since').textContent = since;
+
+    // Credit bar
+    const maxCredits = Math.max((d.credits || 0) + (d.creditsSpent || 0), 10);
+    document.getElementById('acct-credit-bar').style.width = Math.round(((d.credits || 0) / maxCredits) * 100) + '%';
+
+    // Companies list
     const list = document.getElementById('acct-companies-list');
-    if (!d.companies.length) {
-      list.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:32px 0;">No companies yet — build your first one!</div>';
+    if (!d.companies || !d.companies.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:32px 0;border:1px dashed rgba(255,255,255,.1);border-radius:12px;">Aucune société pour l\'instant — crée ta première !</div>';
     } else {
       list.innerHTML = d.companies.map(c => `
-        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:8px;">
-          <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🏢</div>
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;margin-bottom:8px;transition:background .2s;" onmouseenter="this.style.background='rgba(255,255,255,.07)'" onmouseleave="this.style.background='rgba(255,255,255,.04)'">
+          <div style="width:44px;height:44px;border-radius:12px;background:${c.color ? c.color + '33' : 'linear-gradient(135deg,var(--purple),var(--purple2))'};border:1px solid ${c.color ? c.color + '55' : 'rgba(124,58,237,.4)'};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${c.emoji || '🏢'}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:14px;">${c.name}</div>
-            <div style="color:var(--muted);font-size:12px;margin-top:2px;">${c.category || 'AI Company'} · ${new Date(c.createdAt).toLocaleDateString()}</div>
+            <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:3px;">${c.category || 'AI Company'} · ${new Date(c.createdAt).toLocaleDateString('fr-FR', {day:'numeric',month:'short',year:'numeric'})}</div>
           </div>
-          ${c.siteUrl ? `<a href="${c.siteUrl}" target="_blank" style="font-size:12px;color:var(--purple2);text-decoration:none;flex-shrink:0;">↗ Visit</a>` : ''}
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            ${c.siteUrl ? `<a href="${c.siteUrl}" target="_blank" style="font-size:12px;color:var(--purple2);text-decoration:none;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:7px;padding:5px 10px;font-weight:600;">↗ Visiter</a>` : ''}
+          </div>
         </div>
       `).join('');
     }

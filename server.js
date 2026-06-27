@@ -761,12 +761,18 @@ app.get('/api/account', requireAuth, async (req, res) => {
       id: c.id,
       name: c.name,
       category: c.category,
+      emoji: c.emoji,
+      color: c.color,
+      slug: c.slug,
+      tagline: c.tagline,
       siteUrl: c.siteUrl,
       createdAt: c.createdAt,
     }));
+  const userRecord = await dbGetUser(email);
   res.json({
     email,
     credits,
+    createdAt: userRecord?.createdAt || null,
     companies: userCompanies,
     companiesCount: userCompanies.length,
     creditsSpent: userCompanies.length * CREDITS_PER_CREATION,
