@@ -1044,6 +1044,15 @@ body {
       <button class="btn btn-primary btn-sm" onclick="goCreate()">Start →</button>
     </div>
 
+    <!-- MES SOCIÉTÉS -->
+    <div id="home-companies-section" style="margin-bottom:20px;display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;">🏢 Mes sociétés</div>
+        <button onclick="goCreate()" style="background:none;border:none;color:var(--purple2);font-size:12px;font-weight:700;cursor:pointer;padding:0;">+ Nouvelle →</button>
+      </div>
+      <div id="home-companies-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+
     <!-- CREATE CTA -->
     <div class="create-cta-block">
       <h2>⚡ Forge a new AI company</h2>
@@ -1804,7 +1813,54 @@ function show(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
 }
-function goHome() { show('screen-home'); }
+function goHome() { show('screen-home'); loadHomeCompanies(); }
+
+async function loadHomeCompanies() {
+  if (!sessionKey) return;
+  try {
+    const r = await authFetch(API + '/api/account');
+    if (!r.ok) return;
+    const d = await r.json();
+    const section = document.getElementById('home-companies-section');
+    const list = document.getElementById('home-companies-list');
+    if (!section || !list) return;
+    if (!d.companies?.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = d.companies.map(c => `
+      <div onclick="openCompanyFromHome('${c.id}')"
+        style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;cursor:pointer;transition:background .15s,border-color .15s;"
+        onmouseenter="this.style.background='rgba(255,255,255,.07)';this.style.borderColor='rgba(124,58,237,.35)'"
+        onmouseleave="this.style.background='rgba(255,255,255,.04)';this.style.borderColor='rgba(255,255,255,.08)'">
+        <div style="width:48px;height:48px;border-radius:14px;background:${c.color ? c.color+'22' : 'rgba(124,58,237,.15)'};border:1px solid ${c.color ? c.color+'44' : 'rgba(124,58,237,.3)'};display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">${c.emoji || '🏢'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:800;font-size:15px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
+          <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.tagline || c.category || 'AI Company'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+          ${c.siteUrl ? `<a href="${c.siteUrl}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:var(--purple2);background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:6px;padding:3px 8px;text-decoration:none;font-weight:700;">↗ Site</a>` : ''}
+          <span style="font-size:11px;color:var(--dim);">Dashboard →</span>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { if (e.message !== 'session_expired') console.error('loadHomeCompanies', e); }
+}
+
+async function openCompanyFromHome(companyId) {
+  try {
+    const r = await authFetch(API + '/api/company/' + companyId);
+    if (!r.ok) return;
+    const data = await r.json();
+    currentCompanyId = companyId;
+    currentCompanyData = data;
+    currentSiteUrl = data.siteUrl || null;
+    companyName = data.name || 'My Company';
+    // update dashboard topbar
+    const tt = document.getElementById('dash-topbar-title'); if (tt) tt.textContent = companyName;
+    const tu = document.getElementById('dash-topbar-url');
+    if (tu && data.siteUrl) { tu.textContent = '↗ ' + data.siteUrl.replace('https://',''); }
+    goDashboard();
+  } catch(e) { console.error('openCompanyFromHome', e); }
+}
 function goCreate() { wizardStep = 1; updateWizardUI(); show('screen-create'); }
 function goCreateSurprise() { goCreate(); setTimeout(spinSlot, 300); }
 function goCreateWithIdea() {
@@ -2886,7 +2942,7 @@ updateCredits();
     if (sessionKey) {
       const ok = await restoreSession();
       if (ok) {
-        show('screen-home');
+        show('screen-home'); loadHomeCompanies();
         await syncBalance();
         showAchievement('💎', `Credits added! New balance: ${credits} 💎`);
       } else { show('screen-splash'); }
@@ -2894,12 +2950,12 @@ updateCredits();
   } else if (creditsParam === 'cancelled') {
     if (sessionKey) {
       const ok = await restoreSession();
-      if (ok) { show('screen-home'); }
+      if (ok) { show('screen-home'); loadHomeCompanies(); }
       else { show('screen-splash'); }
     } else { show('screen-splash'); }
   } else if (sessionKey) {
     const ok = await restoreSession();
-    if (ok) { show('screen-home'); }
+    if (ok) { show('screen-home'); loadHomeCompanies(); }
     else { show('screen-splash'); }
   } else {
     show('screen-splash');
@@ -3036,6 +3092,7 @@ async function submitAuth() {
       show('screen-onboarding');
     } else {
       show('screen-home');
+      loadHomeCompanies();
       showAchievement('👋', 'Bon retour !');
     }
   } catch (err) {
