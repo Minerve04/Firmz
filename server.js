@@ -115,6 +115,18 @@ async function dbGetUserCompanies(email) {
 }
 
 const app = express();
+
+// ── Trust Railway's reverse proxy (needed for req.secure / X-Forwarded-Proto) ──
+app.set('trust proxy', 1);
+
+// ── Force HTTPS in production ──
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && !req.secure && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, 'https://' + req.headers.host + req.url);
+  }
+  next();
+});
+
 app.use(cors());
 
 // ─────────────────────────────────────────────
