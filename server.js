@@ -314,7 +314,10 @@ Return ONLY a valid JSON object — no markdown fences, no explanation. Use thes
   "ad_headline": "Meta ad headline (max 6 words)",
   "ad_body": "Meta ad body text (2 sentences max)",
   "emoji": "single most relevant emoji for this company",
-  "color": "#hexcolor (vivid brand color, not purple — pick something fitting)"
+  "color": "#hexcolor (vivid primary brand color — pick something fitting for the industry)",
+  "color_secondary": "#hexcolor (secondary accent color that pairs beautifully — complementary or analogous, clearly different from primary)",
+  "font_heading": "Google Font name for headings — pick the best fit: Plus Jakarta Sans | Space Grotesk | Syne | Outfit | Manrope | Figtree | DM Sans",
+  "font_body": "Google Font name for body text — pick one: Inter | DM Sans | Nunito Sans | Lato | Open Sans | Poppins"
 }`
     }],
   });
@@ -342,9 +345,22 @@ Return ONLY a valid JSON object — no markdown fences, no explanation. Use thes
 // 2. GENERATE LANDING PAGE HTML
 // ─────────────────────────────────────────────
 function generateLandingHTML(company, stripeLinks) {
-  const color = company.color || '#7c3aed';
+  const color   = company.color           || '#7c3aed';
+  const color2  = company.color_secondary || '#0ea5e9';
+  const hFont   = company.font_heading    || 'Plus Jakarta Sans';
+  const bFont   = company.font_body       || 'Inter';
   const starterUrl = stripeLinks?.starter?.url || '#';
-  const proUrl = stripeLinks?.pro?.url || '#';
+  const proUrl     = stripeLinks?.pro?.url     || '#';
+
+  // Google Fonts URL — only add body font param if different from heading
+  const fp1 = hFont.replace(/ /g, '+');
+  const fp2 = bFont.replace(/ /g, '+');
+  const fontsUrl = hFont === bFont
+    ? `https://fonts.googleapis.com/css2?family=${fp1}:wght@400;500;600;700;800;900&display=swap`
+    : `https://fonts.googleapis.com/css2?family=${fp1}:wght@700;800;900&family=${fp2}:wght@400;500;600&display=swap`;
+
+  // Logo mark: first letter of company name
+  const initial = escHtml((company.name || '?')[0].toUpperCase());
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -353,85 +369,266 @@ function generateLandingHTML(company, stripeLinks) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escHtml(company.name)} — ${escHtml(company.tagline)}</title>
 <meta name="description" content="${escHtml(company.description)}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="${fontsUrl}" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root { --c: ${color}; --bg: #07070f; --card: #0d0d1a; --text: #f1f5f9; --muted: #94a3b8; --dim: #475569; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-a { text-decoration: none; }
-/* Nav */
-nav { padding: 16px 48px; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: rgba(7,7,15,.92); backdrop-filter: blur(16px); z-index: 50; }
-.logo { font-size: 18px; font-weight: 900; color: white; }
-.nav-cta { padding: 10px 22px; background: var(--c); color: white; border-radius: 8px; font-weight: 700; font-size: 14px; transition: opacity .2s; }
+:root {
+  --c: ${color};
+  --c2: ${color2};
+  --bg: #06060f;
+  --card: #0c0c1d;
+  --border: rgba(255,255,255,.08);
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --dim: #475569;
+}
+body {
+  font-family: '${bFont}', system-ui, sans-serif;
+  background: var(--bg);
+  background-image: radial-gradient(circle, rgba(255,255,255,.028) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+a { text-decoration: none; color: inherit; }
+h1, h2, h3,
+.logo-name, .nav-cta, .btn-primary, .plan-price,
+.feat-title, .plan-name, .plan-btn {
+  font-family: '${hFont}', system-ui, sans-serif;
+}
+
+/* ── Nav ──────────────────────────── */
+nav {
+  padding: 0 48px;
+  height: 64px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(6,6,15,.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, ${color}, ${color2});
+  display: flex; align-items: center; justify-content: center;
+  font-family: '${hFont}', sans-serif;
+  font-size: 15px; font-weight: 900;
+  color: white; flex-shrink: 0;
+}
+.logo-name { font-size: 17px; font-weight: 900; color: white; }
+.nav-cta {
+  padding: 9px 20px;
+  background: linear-gradient(135deg, ${color}, ${color2});
+  color: white; border-radius: 8px;
+  font-weight: 700; font-size: 14px;
+  transition: opacity .2s;
+  box-shadow: 0 2px 14px ${color}44;
+}
 .nav-cta:hover { opacity: .85; }
-/* Hero */
-.hero { text-align: center; padding: 120px 40px 100px; max-width: 800px; margin: 0 auto; }
-.hero-emoji { font-size: 60px; margin-bottom: 24px; display: block; }
-h1 { font-size: clamp(38px, 6vw, 68px); font-weight: 900; letter-spacing: -2.5px; line-height: 1.05; margin-bottom: 22px; }
-.hero p { font-size: 18px; color: var(--muted); max-width: 540px; margin: 0 auto 40px; line-height: 1.7; }
-.hero-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.btn-primary { padding: 16px 34px; background: var(--c); color: white; border-radius: 12px; font-weight: 800; font-size: 16px; transition: opacity .2s; }
-.btn-primary:hover { opacity: .85; }
-.btn-ghost { padding: 16px 28px; border: 1px solid rgba(255,255,255,.15); color: var(--text); border-radius: 12px; font-weight: 600; font-size: 15px; transition: background .2s; }
-.btn-ghost:hover { background: rgba(255,255,255,.05); }
-/* Features */
-.features { padding: 100px 48px; max-width: 1100px; margin: 0 auto; }
-.section-label { text-align: center; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--c); font-weight: 700; margin-bottom: 16px; }
-.features h2 { text-align: center; font-size: clamp(28px, 4vw, 44px); font-weight: 900; letter-spacing: -1.5px; margin-bottom: 60px; }
-.feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.feat-card { background: var(--card); border: 1px solid rgba(255,255,255,.07); border-radius: 16px; padding: 32px; transition: border-color .2s; }
-.feat-card:hover { border-color: rgba(255,255,255,.15); }
-.feat-icon { font-size: 34px; margin-bottom: 16px; }
-.feat-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+
+/* ── Hero ─────────────────────────── */
+.hero-wrap { position: relative; overflow: hidden; }
+.hero-glow {
+  position: absolute; top: -160px; left: 50%;
+  transform: translateX(-50%);
+  width: 900px; height: 620px;
+  background: radial-gradient(ellipse at center, ${color}26 0%, ${color2}12 45%, transparent 70%);
+  pointer-events: none;
+}
+.hero {
+  text-align: center;
+  padding: 110px 40px 100px;
+  max-width: 820px; margin: 0 auto;
+  position: relative;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 700;
+  padding: 6px 14px; border-radius: 100px;
+  border: 1px solid ${color}55;
+  background: ${color}14;
+  color: ${color};
+  margin-bottom: 32px;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.hero-emoji {
+  font-size: 58px; display: block; margin-bottom: 28px;
+  filter: drop-shadow(0 0 28px ${color}66);
+}
+h1 {
+  font-size: clamp(40px, 6.5vw, 72px);
+  font-weight: 900;
+  letter-spacing: -3px;
+  line-height: 1.03;
+  margin-bottom: 24px;
+  background: linear-gradient(180deg, #ffffff 10%, rgba(255,255,255,.72) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p {
+  font-size: 18px; color: var(--muted);
+  max-width: 540px; margin: 0 auto 44px;
+  line-height: 1.75;
+}
+.hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn-primary {
+  padding: 15px 32px;
+  background: linear-gradient(135deg, ${color}, ${color2});
+  color: white; border-radius: 12px;
+  font-weight: 800; font-size: 15px;
+  transition: opacity .2s, transform .15s;
+  box-shadow: 0 4px 24px ${color}44;
+}
+.btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+.btn-ghost {
+  padding: 15px 26px;
+  border: 1px solid var(--border);
+  color: var(--muted); border-radius: 12px;
+  font-weight: 600; font-size: 15px;
+  transition: border-color .2s, color .2s;
+}
+.btn-ghost:hover { border-color: rgba(255,255,255,.2); color: white; }
+
+/* ── Features ─────────────────────── */
+.section-wrap { padding: 100px 48px; max-width: 1140px; margin: 0 auto; }
+.section-label {
+  text-align: center;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .14em;
+  background: linear-gradient(90deg, ${color}, ${color2});
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800; margin-bottom: 14px;
+}
+h2 {
+  text-align: center;
+  font-size: clamp(28px, 4vw, 46px);
+  font-weight: 900; letter-spacing: -2px;
+  margin-bottom: 60px; color: white;
+}
+.feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.feat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px 28px;
+  transition: border-color .25s, transform .25s;
+}
+.feat-card:hover { border-color: ${color}66; transform: translateY(-2px); }
+.feat-icon { font-size: 32px; margin-bottom: 18px; }
+.feat-title { font-size: 16px; font-weight: 800; margin-bottom: 10px; color: white; }
 .feat-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
-/* Pricing */
-.pricing { padding: 100px 48px; max-width: 820px; margin: 0 auto; text-align: center; }
-.pricing h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 900; letter-spacing: -1.5px; margin-bottom: 60px; }
+
+/* ── Pricing ──────────────────────── */
+.pricing-wrap { padding: 100px 48px; max-width: 860px; margin: 0 auto; text-align: center; }
 .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; }
-.plan { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 20px; padding: 36px; display: flex; flex-direction: column; }
-.plan.featured { border-color: var(--c); box-shadow: 0 0 40px rgba(0,0,0,.4); }
-.plan-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 100px; background: var(--c); color: white; margin-bottom: 20px; width: fit-content; }
-.plan-name { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
-.plan-price { font-size: 52px; font-weight: 900; letter-spacing: -2px; margin-bottom: 4px; }
-.plan-price span { font-size: 16px; font-weight: 400; color: var(--dim); }
+.plan {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px; padding: 38px 34px;
+  display: flex; flex-direction: column;
+}
+.plan.featured {
+  border-color: ${color}88;
+  background: linear-gradient(180deg, ${color}0e 0%, var(--card) 55%);
+  box-shadow: 0 0 60px ${color}18;
+}
+.plan-badge {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 700;
+  padding: 4px 12px; border-radius: 100px;
+  background: linear-gradient(135deg, ${color}, ${color2});
+  color: white; margin-bottom: 20px; width: fit-content;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.plan-name {
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px;
+}
+.plan-price {
+  font-size: 56px; font-weight: 900;
+  letter-spacing: -3px; line-height: 1;
+  margin-bottom: 6px; color: white;
+}
+.plan-price span { font-size: 16px; font-weight: 400; color: var(--dim); letter-spacing: 0; }
 .plan-sub { font-size: 13px; color: var(--dim); margin-bottom: 28px; }
-.plan-features { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; flex: 1; }
-.plan-features li { font-size: 14px; display: flex; gap: 9px; align-items: flex-start; }
-.plan-features li::before { content: '✓'; color: var(--c); font-weight: 900; flex-shrink: 0; margin-top: 1px; }
-.plan-btn { display: block; text-align: center; padding: 15px; border-radius: 12px; font-weight: 800; font-size: 15px; background: var(--c); color: white; transition: opacity .2s; margin-top: auto; }
-.plan-btn:hover { opacity: .85; }
-.plan-btn.outline { background: transparent; border: 1px solid rgba(255,255,255,.15); }
-/* Footer */
-footer { border-top: 1px solid rgba(255,255,255,.07); padding: 48px; text-align: center; color: var(--dim); font-size: 13px; }
-footer strong { color: var(--muted); }
+.plan-features {
+  list-style: none; display: flex;
+  flex-direction: column; gap: 13px;
+  margin-bottom: 32px; flex: 1;
+}
+.plan-features li { font-size: 14px; display: flex; gap: 10px; align-items: flex-start; color: var(--muted); }
+.plan-features li::before { content: '✓'; color: ${color}; font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+.plan-btn {
+  display: block; text-align: center; padding: 15px;
+  border-radius: 12px; font-weight: 800; font-size: 15px;
+  background: linear-gradient(135deg, ${color}, ${color2});
+  color: white; transition: opacity .2s, transform .15s;
+  margin-top: auto;
+  box-shadow: 0 4px 20px ${color}33;
+}
+.plan-btn:hover { opacity: .88; transform: translateY(-1px); }
+.plan-btn.outline {
+  background: transparent; border: 1px solid var(--border);
+  box-shadow: none; color: var(--muted);
+}
+.plan-btn.outline:hover { border-color: rgba(255,255,255,.2); color: white; }
+
+/* ── Footer ───────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 48px; text-align: center;
+  color: var(--dim); font-size: 13px;
+}
+footer strong { color: var(--muted); font-family: '${hFont}', sans-serif; }
+
+/* ── Responsive ───────────────────── */
 @media(max-width: 768px) {
-  nav { padding: 14px 24px; }
-  .feat-grid { grid-template-columns: 1fr; }
+  nav { padding: 0 20px; }
+  .hero { padding: 70px 24px 60px; }
+  h1 { letter-spacing: -1.5px; }
+  .section-wrap, .pricing-wrap { padding: 60px 24px; }
+  .feat-grid { grid-template-columns: 1fr; gap: 12px; }
   .pricing-grid { grid-template-columns: 1fr; }
-  .hero { padding: 80px 24px 60px; }
-  .features, .pricing { padding: 60px 24px; }
 }
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="logo">${company.emoji} ${escHtml(company.name)}</div>
+  <div class="logo">
+    <div class="logo-mark">${initial}</div>
+    <span class="logo-name">${escHtml(company.name)}</span>
+  </div>
   <a href="${starterUrl}" class="nav-cta">Get started →</a>
 </nav>
 
-<section class="hero">
-  <span class="hero-emoji">${company.emoji}</span>
-  <h1>${escHtml(company.hero_headline)}</h1>
-  <p>${escHtml(company.hero_sub)}</p>
-  <div class="hero-btns">
-    <a href="${starterUrl}" class="btn-primary">Start free →</a>
-    <a href="#features" class="btn-ghost">How it works</a>
-  </div>
-</section>
+<div class="hero-wrap">
+  <div class="hero-glow"></div>
+  <section class="hero">
+    <div class="hero-badge">✦ AI-Powered</div>
+    <span class="hero-emoji">${company.emoji}</span>
+    <h1>${escHtml(company.hero_headline)}</h1>
+    <p>${escHtml(company.hero_sub)}</p>
+    <div class="hero-btns">
+      <a href="${starterUrl}" class="btn-primary">Start free →</a>
+      <a href="#features" class="btn-ghost">See how it works</a>
+    </div>
+  </section>
+</div>
 
-<section class="features" id="features">
+<div class="section-wrap" id="features">
   <p class="section-label">Features</p>
-  <h2>Everything built in. Zero setup.</h2>
+  <h2>Everything you need. Nothing you don't.</h2>
   <div class="feat-grid">
     ${company.features.map(f => `
     <div class="feat-card">
@@ -440,36 +637,37 @@ footer strong { color: var(--muted); }
       <div class="feat-desc">${escHtml(f.desc)}</div>
     </div>`).join('')}
   </div>
-</section>
+</div>
 
-<section class="pricing" id="pricing">
-  <h2>Simple pricing.</h2>
+<div class="pricing-wrap" id="pricing">
+  <p class="section-label">Pricing</p>
+  <h2>Simple, honest pricing.</h2>
   <div class="pricing-grid">
     <div class="plan">
       <div class="plan-name">${escHtml(company.starter_name)}</div>
       <div class="plan-price">$${company.starter_price}<span>/mo</span></div>
-      <div class="plan-sub">Perfect to get started</div>
+      <div class="plan-sub">Everything to get started</div>
       <ul class="plan-features">
         ${company.starter_features.map(f => `<li>${escHtml(f)}</li>`).join('')}
       </ul>
       <a href="${starterUrl}" class="plan-btn outline">Get started →</a>
     </div>
     <div class="plan featured">
-      <span class="plan-badge">Most popular</span>
+      <span class="plan-badge">⭐ Most popular</span>
       <div class="plan-name">${escHtml(company.pro_name)}</div>
       <div class="plan-price">$${company.pro_price}<span>/mo</span></div>
-      <div class="plan-sub">For serious founders</div>
+      <div class="plan-sub">For serious teams</div>
       <ul class="plan-features">
         ${company.pro_features.map(f => `<li>${escHtml(f)}</li>`).join('')}
       </ul>
       <a href="${proUrl}" class="plan-btn">Get ${escHtml(company.pro_name)} →</a>
     </div>
   </div>
-</section>
+</div>
 
 <footer>
   <strong>${escHtml(company.name)}</strong> — ${escHtml(company.tagline)}<br>
-  <span style="margin-top:10px;display:block;">Built with <a href="#" style="color:var(--muted);">Forge</a> · Powered by AI</span>
+  <span style="margin-top:10px;display:block;">Built with <a href="#" style="color:var(--muted)">Forge</a> · Powered by AI</span>
 </footer>
 
 </body>
