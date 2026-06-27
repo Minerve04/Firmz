@@ -1518,6 +1518,84 @@ app.patch('/api/agents/:companyId/:type', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── DAILY REPORT — Claude-generated narrative ──
+app.get('/api/report/:companyId', requireAuth, async (req, res) => {
+  try {
+    const company = await dbGetCompany(req.params.companyId);
+    if (!company) return res.status(404).json({ error: 'Not found' });
+    if (company.founderEmail !== req.userEmail) return res.status(403).json({ error: 'Forbidden' });
+
+    // Gather Stripe snapshot
+    let revenue24h = 0, revenueTotal = 0, customers = 0, recentTx = [];
+    if (company.stripeAccountId) {
+      try {
+        const s = getStripe();
+        const since24h = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+        const [charges24h, allCharges] = await Promise.all([
+          s.charges.list({ limit: 50, created: { gte: since24h } }, { stripeAccount: company.stripeAccountId }),
+          s.charges.list({ limit: 100 }, { stripeAccount: company.stripeAccountId }),
+        ]);
+        const ok24h = charges24h.data.filter(c => c.status === 'succeeded');
+        const okAll  = allCharges.data.filter(c => c.status === 'succeeded');
+        revenue24h   = ok24h.reduce((s, c) => s + c.amount, 0) / 100;
+        revenueTotal = okAll.reduce((s, c) => s + c.amount, 0) / 100;
+        customers    = new Set(okAll.map(c => c.billing_details?.email || c.receipt_email).filter(Boolean)).size;
+        recentTx     = ok24h.slice(0, 5).map(c => `${c.currency.toUpperCase()} ${(c.amount/100).toFixed(2)} from ${c.billing_details?.email || 'customer'}`);
+      } catch(e) { console.error('[report] stripe:', e.message); }
+    }
+
+    // Agent statuses
+    const agents = company.agents || {};
+    const agentLines = ['sales','growth','ads','product'].map(t => {
+      const a = agents[t];
+      return `${t}: ${a?.status || 'idle'}${a?.lastRun ? ' (last run: ' + new Date(a.lastRun).toLocaleDateString('en-GB') + ')' : ''}`;
+    }).join(', ');
+
+    const today = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    const client = getAnthropic();
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 800,
+      messages: [{ role: 'user', content:
+`You are the AI CEO of ${company.name}. Write a concise, punchy daily business report for ${today}.
+
+Company: ${company.name} — ${company.tagline}
+Description: ${company.description}
+ICP: ${company.icp}
+Stripe connected: ${!!company.stripeAccountId}
+Revenue last 24h: $${revenue24h.toFixed(2)}
+Revenue all-time: $${revenueTotal.toFixed(2)}
+Total customers: ${customers}
+Recent transactions: ${recentTx.join('; ') || 'none yet'}
+Agent statuses: ${agentLines}
+
+Return ONLY JSON (no markdown):
+{
+  "headline": "one punchy sentence summarizing the day",
+  "metrics": [
+    { "label": "Revenue 24h", "value": "...", "trend": "up|down|flat" },
+    { "label": "All-time revenue", "value": "...", "trend": "up|down|flat" },
+    { "label": "Customers", "value": "...", "trend": "up|down|flat" },
+    { "label": "Active agents", "value": "X/4", "trend": "up|down|flat" }
+  ],
+  "summary": "2-3 sentences narrative of what happened today and why it matters",
+  "priorities": ["top priority for tomorrow #1", "top priority for tomorrow #2", "top priority for tomorrow #3"]
+}`
+      }],
+    });
+
+    const raw = msg.content[0].text;
+    const report = JSON.parse((raw.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+    report.date = today;
+    report.companyName = company.name;
+    report.stripeConnected = !!company.stripeAccountId;
+    res.json(report);
+  } catch(e) {
+    console.error('[report]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── DASHBOARD — real Stripe data ──
 app.get('/api/dashboard/:companyId', requireAuth, async (req, res) => {
   try {

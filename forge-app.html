@@ -1315,6 +1315,7 @@ body {
       <span class="topbar-title" id="dash-topbar-title">My Company</span>
       <div style="display:flex;gap:10px;align-items:center;">
         <span style="font-size:12px;color:var(--dim);" id="dash-topbar-url"></span>
+        <button class="btn btn-ghost btn-sm" onclick="openDailyReport()" id="daily-report-btn">📋 Daily report</button>
         <button class="btn btn-primary btn-sm" onclick="switchTab('chat',null)">💬 Chat CEO</button>
         <div id="topbar-avatar" onclick="openAccount('screen-dashboard')" title="Mon compte" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;cursor:pointer;flex-shrink:0;border:2px solid rgba(167,139,250,.4);transition:opacity .15s;" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">?</div>
       </div>
@@ -1457,6 +1458,19 @@ body {
           <button onclick="closeAgentModal()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;">✕</button>
         </div>
         <div id="agent-modal-body" style="font-size:14px;color:var(--muted);line-height:1.7;"></div>
+      </div>
+    </div>
+
+    <!-- Daily Report modal -->
+    <div id="daily-report-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#0e0e1f;border:1px solid rgba(255,255,255,.12);border-radius:24px;max-width:580px;width:100%;max-height:85vh;overflow-y:auto;padding:32px;position:relative;">
+        <button onclick="document.getElementById('daily-report-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.07);border:none;color:var(--dim);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>
+        <div id="dr-content">
+          <div style="text-align:center;padding:40px 0;color:var(--dim);">
+            <div style="font-size:32px;margin-bottom:12px;">📊</div>
+            <div style="font-size:14px;">Génération du rapport…</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2425,6 +2439,83 @@ async function saveAgentConfig() {
 function closeConfigModal() {
   document.getElementById('agent-config-modal').style.display = 'none';
   agentConfigType = null;
+}
+
+/* ═══════════════ DAILY REPORT ═══════════════ */
+async function openDailyReport() {
+  if (!currentCompanyId) return;
+  const modal = document.getElementById('daily-report-modal');
+  const content = document.getElementById('dr-content');
+  modal.style.display = 'flex';
+
+  // Loading state
+  content.innerHTML = `<div style="text-align:center;padding:48px 0;color:var(--dim);">
+    <div style="font-size:36px;margin-bottom:14px;animation:pulse 1.5s infinite;">📊</div>
+    <div style="font-size:14px;font-weight:600;color:white;margin-bottom:6px;">Génération du rapport…</div>
+    <div style="font-size:12px;">Claude analyse ta journée</div>
+  </div>`;
+
+  const btn = document.getElementById('daily-report-btn');
+  if (btn) btn.disabled = true;
+
+  try {
+    const r = await authFetch(API + '/api/report/' + currentCompanyId);
+    if (!r.ok) { content.innerHTML = `<div style="color:var(--dim);text-align:center;padding:40px;">Erreur lors de la génération du rapport.</div>`; return; }
+    const d = await r.json();
+    renderDailyReport(d);
+  } catch(e) {
+    content.innerHTML = `<div style="color:var(--dim);text-align:center;padding:40px;">Une erreur s'est produite.</div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function renderDailyReport(d) {
+  const content = document.getElementById('dr-content');
+  const trendIcon = t => t === 'up' ? '<span style="color:#10b981">▲</span>' : t === 'down' ? '<span style="color:#ef4444">▼</span>' : '<span style="color:#64748b">—</span>';
+
+  content.innerHTML = `
+    <!-- Header -->
+    <div style="margin-bottom:24px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:6px;">📊 Daily Report</div>
+      <div style="font-size:22px;font-weight:900;color:white;letter-spacing:-0.5px;margin-bottom:4px;">${d.companyName}</div>
+      <div style="font-size:13px;color:var(--muted);">${d.date}</div>
+    </div>
+
+    <!-- Headline -->
+    <div style="background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(167,139,250,.06));border:1px solid rgba(124,58,237,.25);border-radius:14px;padding:16px 18px;margin-bottom:20px;">
+      <div style="font-size:15px;font-weight:700;color:white;line-height:1.5;">"${d.headline}"</div>
+    </div>
+
+    <!-- Metrics grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      ${(d.metrics || []).map(m => `
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;">
+          <div style="font-size:11px;color:var(--dim);margin-bottom:4px;">${m.label}</div>
+          <div style="font-size:20px;font-weight:900;color:white;">${m.value} ${trendIcon(m.trend)}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Summary -->
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px 18px;margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:700;color:var(--purple2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Résumé CEO</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7;">${d.summary || '—'}</div>
+    </div>
+
+    <!-- Priorities -->
+    <div style="margin-bottom:24px;">
+      <div style="font-size:12px;font-weight:700;color:var(--purple2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;">⚡ Priorités de demain</div>
+      ${(d.priorities || []).map((p, i) => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px;margin-bottom:6px;">
+          <span style="width:20px;height:20px;border-radius:6px;background:rgba(124,58,237,.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--purple2);flex-shrink:0;">${i+1}</span>
+          <span style="font-size:13px;color:var(--muted);line-height:1.5;">${p}</span>
+        </div>`).join('')}
+    </div>
+
+    ${!d.stripeConnected ? `<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:12px 14px;font-size:12px;color:rgba(245,158,11,.9);margin-bottom:16px;">⚠ Connecte Stripe pour voir les vraies données de revenus dans ce rapport.</div>` : ''}
+
+    <button onclick="document.getElementById('daily-report-modal').style.display='none'" class="btn btn-primary btn-full" style="width:100%;">Fermer →</button>
+  `;
 }
 
 function buildChart() {
