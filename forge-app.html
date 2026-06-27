@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Forge — Build Your AI Company</title>
+<title>Firmz — Build Your AI Company</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -84,6 +84,18 @@ body {
 }
 .credit-pill:hover { background: rgba(124,58,237,.25); transform: scale(1.04); }
 .credit-pill .gem { font-size: 16px; }
+
+/* credit pack options */
+.credit-pack-opt {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.credit-pack-opt:hover { border-color: var(--purple); background: rgba(124,58,237,.08); }
+.credit-pack-opt.selected { border-color: var(--purple); background: rgba(124,58,237,.12); }
 
 /* pulse dot */
 .dot-live {
@@ -815,11 +827,11 @@ body {
 <!-- ═══════════ HOME ═══════════ -->
 <div id="screen-home" class="screen">
   <div class="home-nav">
-    <span class="logo">⬡ FORGE</span>
+    <span class="logo">⬡ FIRMZ</span>
     <div style="display:flex;gap:10px;align-items:center;">
-      <div class="credit-pill" onclick="spendCredit()" title="Click to use a credit">
+      <div class="credit-pill" onclick="openBuyCredits()" title="Buy more credits">
         <span class="gem">💎</span>
-        <span id="home-credits">2</span> credits
+        <span id="home-credits">3</span> credits
       </div>
       <div class="sb-avatar" style="width:34px;height:34px;font-size:13px;cursor:pointer;">T</div>
     </div>
@@ -922,9 +934,9 @@ body {
 <!-- ═══════════ CREATE ═══════════ -->
 <div id="screen-create" class="screen">
   <div class="create-nav">
-    <span class="logo">⬡ FORGE</span>
+    <span class="logo">⬡ FIRMZ</span>
     <div style="display:flex;gap:10px;align-items:center;">
-      <div class="credit-pill"><span class="gem">💎</span> <span id="create-credits">2</span> credits</div>
+      <div class="credit-pill" onclick="openBuyCredits()"><span class="gem">💎</span> <span id="create-credits">3</span> credits</div>
       <button class="btn btn-ghost btn-sm" onclick="goHome()">✕ Cancel</button>
     </div>
   </div>
@@ -1027,11 +1039,15 @@ body {
         <div style="background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px;margin-top:4px;">
           <p style="font-size:13px;color:var(--muted);line-height:1.6;">💡 <strong style="color:var(--text)">Earn more credits:</strong> refer a friend and get +2 credits per signup. Complete daily challenges for bonus credits.</p>
         </div>
+        <div style="margin-top:20px;">
+          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:8px;">Your email <span style="color:var(--purple2);">*</span> (tracks your credits + receives launch report)</label>
+          <input class="input" id="founder-email-input" type="email" placeholder="you@company.com" onblur="syncBalance(this.value)" />
+        </div>
       </div>
       <div class="wp-footer">
         <button class="btn btn-ghost btn-sm" onclick="nextWizard(2)">← Back</button>
         <button class="btn btn-primary btn-lg" onclick="startBuild()" id="launch-btn">
-          ⚡ Launch my company — uses 💎 1 credit
+          ⚡ Launch my company — uses 💎 3 credits
         </button>
       </div>
     </div>
@@ -1111,7 +1127,7 @@ body {
         <div class="sa-icon">🚀</div>
         <div class="sa-label">Launched</div>
       </div>
-      <div class="sa-item">
+      <div class="sa-item" id="sa-stripe">
         <div class="sa-icon">💳</div>
         <div class="sa-label">Stripe live</div>
       </div>
@@ -1125,6 +1141,18 @@ body {
       </div>
     </div>
 
+    <!-- Stripe Connect CTA — shown when Stripe Connect is enabled -->
+    <a id="stripe-connect-btn" href="#" class="btn btn-full btn-xl"
+       style="display:none;margin-bottom:12px;background:linear-gradient(135deg,#635bff,#0073e6);color:#fff;font-size:15px;font-weight:800;border-radius:12px;padding:16px;gap:10px;text-decoration:none;">
+      <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="white"/><path d="M16.7 16.3c0-.8.7-1.1 1.8-1.1 1.6 0 3.6.5 5.2 1.4v-4.9c-1.7-.7-3.5-1-5.2-1C14.6 10.7 12 13 12 16.5c0 5.5 7.6 4.6 7.6 7 0 .9-.8 1.2-2 1.2-1.7 0-3.9-.7-5.6-1.7v4.9c1.9.8 3.8 1.2 5.6 1.2 4.2 0 7-2.1 7-5.7-.1-5.9-7.9-4.9-7.9-7.1z" fill="#635BFF"/></svg>
+      Connect your Stripe account →
+    </a>
+
+    <!-- Stripe Connected confirmation (shown after OAuth redirect) -->
+    <div id="stripe-connected-banner" style="display:none;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:14px;color:#10b981;font-weight:600;">
+      ✓ Stripe connected — payment links are live on your site!
+    </div>
+
     <button class="btn btn-green btn-full btn-xl" onclick="goDashboard()" style="margin-bottom:12px;">
       Open my dashboard →
     </button>
@@ -1136,7 +1164,7 @@ body {
 <!-- ═══════════ DASHBOARD ═══════════ -->
 <div id="screen-dashboard" class="screen">
   <aside class="sidebar">
-    <div class="sb-logo"><span class="logo">⬡ FORGE</span></div>
+    <div class="sb-logo"><span class="logo">⬡ FIRMZ</span></div>
 
     <div class="sb-company">
       <div class="sb-company-label">Active company</div>
@@ -1341,9 +1369,48 @@ body {
   </div>
 </div>
 
+<!-- ═══════════ BUY CREDITS MODAL ═══════════ -->
+<div id="buy-credits-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0d0d1a;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:36px;max-width:440px;width:100%;position:relative;">
+    <button onclick="closeBuyCredits()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;">✕</button>
+    <div style="font-size:42px;margin-bottom:10px;">💎</div>
+    <h2 style="font-size:22px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;">Get More Credits</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">Each company creation costs <strong style="color:var(--text);">3 💎 credits</strong>.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px;">
+      <div class="credit-pack-opt" onclick="selectPack('starter')" id="pack-starter">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:800;font-size:15px;">10 💎 Starter</div><div style="color:var(--muted);font-size:12px;margin-top:2px;">= 3 company creations</div></div>
+          <div style="font-size:20px;font-weight:900;">$19</div>
+        </div>
+      </div>
+      <div class="credit-pack-opt selected" onclick="selectPack('pro')" id="pack-pro">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:800;font-size:15px;">30 💎 Pro <span style="font-size:11px;background:var(--purple);color:white;padding:2px 8px;border-radius:100px;margin-left:6px;">BEST VALUE</span></div>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px;">= 10 company creations</div>
+          </div>
+          <div style="font-size:20px;font-weight:900;">$49</div>
+        </div>
+      </div>
+      <div class="credit-pack-opt" onclick="selectPack('scale')" id="pack-scale">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div style="font-weight:800;font-size:15px;">100 💎 Scale</div><div style="color:var(--muted);font-size:12px;margin-top:2px;">= 33 company creations</div></div>
+          <div style="font-size:20px;font-weight:900;">$149</div>
+        </div>
+      </div>
+    </div>
+    <input class="input" id="buy-email-input" type="email" placeholder="Your email address" style="margin-bottom:12px;" />
+    <button class="btn btn-primary btn-full btn-lg" onclick="buyCreditPack()" id="buy-credits-btn">💎 Buy Credits with Stripe →</button>
+    <p style="text-align:center;font-size:12px;color:var(--dim);margin-top:10px;">Secure payment via Stripe · No subscription</p>
+  </div>
+</div>
+
 <script>
 /* ═══════════════ STATE ═══════════════ */
-let credits = 2;
+let credits = 3;
+let userEmail = '';
+let selectedPackId = 'pro';
+const CREDITS_PER_CREATION = 3;
 let selectedPlan = 'free';
 let companyName = 'PayFlow AI';
 let wizardStep = 1;
@@ -1573,6 +1640,20 @@ function handleSSEEvent(event, data) {
       document.getElementById('success-company-name').textContent = (data.company?.name || companyName) + ' is live!';
       document.getElementById('success-url-text').textContent = data.siteUrl || companyName.toLowerCase().replace(/\s+/g,'-') + '.forge.app';
 
+      // Stripe Connect button
+      const stripeBtn = document.getElementById('stripe-connect-btn');
+      const stripeAchiev = document.getElementById('sa-stripe');
+      if (data.stripeConnectEnabled && data.companyId) {
+        if (stripeBtn) {
+          stripeBtn.style.display = 'flex';
+          stripeBtn.href = `/api/stripe/connect/${data.companyId}`;
+        }
+        if (stripeAchiev) stripeAchiev.querySelector('.sa-label').textContent = 'Connect Stripe';
+      } else if (!data.stripeConnectEnabled) {
+        if (stripeBtn) stripeBtn.style.display = 'none';
+        if (stripeAchiev) stripeAchiev.querySelector('.sa-icon').textContent = '⏳';
+      }
+
       // Update dashboard company name
       const dashName = document.querySelector('.sb-company-name');
       if (dashName) dashName.childNodes[0].textContent = data.company?.name || companyName;
@@ -1601,8 +1682,22 @@ async function startBuild() {
   companyName = document.getElementById('company-name-input').value.trim() || 'Your Company';
   const idea = document.getElementById('idea-textarea').value.trim() || 'An AI company';
   const category = document.querySelector('.cat-opt.selected .label')?.textContent || 'B2B SaaS';
+  const founderEmail = document.getElementById('founder-email-input')?.value?.trim() || '';
 
-  credits--;
+  if (!founderEmail) {
+    alert('Please enter your email address to track your credits.');
+    return;
+  }
+
+  userEmail = founderEmail;
+
+  // Check credits before proceeding
+  if (credits < CREDITS_PER_CREATION) {
+    openBuyCredits();
+    return;
+  }
+
+  credits -= CREDITS_PER_CREATION;
   updateCredits();
   show('screen-build');
 
@@ -1654,7 +1749,7 @@ async function startBuild() {
         idea,
         name: companyName,
         category,
-        founderEmail: 'thomas@victoire.ai',
+        founderEmail,
       }),
     });
 
@@ -1900,6 +1995,121 @@ setTimeout(() => {
 
 // Init credits display
 updateCredits();
+
+/* ═══════════════ CREDIT SYSTEM ═══════════════ */
+async function syncBalance(email) {
+  if (!email || !email.includes('@')) return;
+  userEmail = email;
+  try {
+    const r = await fetch(API + '/api/credits/balance/' + encodeURIComponent(email));
+    if (r.ok) {
+      const data = await r.json();
+      credits = data.credits;
+      updateCredits();
+    }
+  } catch (e) { /* server offline — keep local count */ }
+}
+
+function openBuyCredits() {
+  const modal = document.getElementById('buy-credits-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  const emailInput = document.getElementById('buy-email-input');
+  if (emailInput && userEmail) emailInput.value = userEmail;
+}
+
+function closeBuyCredits() {
+  const modal = document.getElementById('buy-credits-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function selectPack(packId) {
+  selectedPackId = packId;
+  ['starter','pro','scale'].forEach(id => {
+    const el = document.getElementById('pack-' + id);
+    if (el) el.classList.toggle('selected', id === packId);
+  });
+}
+
+async function buyCreditPack() {
+  const email = document.getElementById('buy-email-input')?.value?.trim();
+  if (!email || !email.includes('@')) { alert('Please enter a valid email address.'); return; }
+  userEmail = email;
+  const btn = document.getElementById('buy-credits-btn');
+  if (btn) { btn.textContent = 'Redirecting to Stripe…'; btn.disabled = true; }
+  try {
+    const r = await fetch(API + '/api/credits/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, packId: selectedPackId }),
+    });
+    const data = await r.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error(data.error || 'Checkout error');
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+    if (btn) { btn.textContent = '💎 Buy Credits →'; btn.disabled = false; }
+  }
+}
+
+/* ═══════════════ STRIPE CONNECT — OAuth return handler ═══════════════ */
+(function handleOAuthReturn() {
+  const params = new URLSearchParams(window.location.search);
+
+  // Stripe Connect success
+  if (params.get('stripe') === 'connected') {
+    const cid = params.get('company');
+    if (cid) currentCompanyId = cid;
+
+    // Show success screen with the connected banner
+    show('screen-success');
+    document.getElementById('stripe-connect-btn').style.display = 'none';
+    document.getElementById('stripe-connected-banner').style.display = 'block';
+    const saStripe = document.getElementById('sa-stripe');
+    if (saStripe) {
+      saStripe.querySelector('.sa-icon').textContent = '✅';
+      saStripe.querySelector('.sa-label').textContent = 'Stripe live';
+    }
+    showAchievement('💳', 'Stripe connected!');
+    launchConfetti();
+
+    // Clean URL
+    window.history.replaceState({}, '', '/forge-app.html');
+  }
+
+  // Credits purchase success
+  if (params.get('credits') === 'success') {
+    const email = decodeURIComponent(params.get('email') || '');
+    if (email) {
+      syncBalance(email).then(() => {
+        show('screen-home');
+        showAchievement('💎', 'Credits added! Time to build.');
+        launchConfetti();
+      });
+    } else {
+      show('screen-home');
+      showAchievement('💎', 'Credits added! Time to build.');
+    }
+    window.history.replaceState({}, '', '/forge-app.html');
+  }
+
+  // Credits cancelled
+  if (params.get('credits') === 'cancelled') {
+    show('screen-home');
+    window.history.replaceState({}, '', '/forge-app.html');
+  }
+
+  // Stripe Connect error
+  if (params.get('stripe_error')) {
+    const errMsg = decodeURIComponent(params.get('stripe_error'));
+    show('screen-home');
+    setTimeout(() => showAchievement('❌', 'Stripe error: ' + errMsg.slice(0, 40)), 400);
+    window.history.replaceState({}, '', '/forge-app.html');
+  }
+})();
 </script>
 </body>
 </html>

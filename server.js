@@ -7,10 +7,6 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
-
-// Serve the frontend files
-app.use(express.static(path.join(__dirname)));
 
 // ─────────────────────────────────────────────
 // CLIENTS (lazy-init so missing keys don't crash startup)
@@ -42,6 +38,59 @@ function getResend() {
   }
   return resend;
 }
+
+// ─────────────────────────────────────────────
+// CREDIT SYSTEM
+// ─────────────────────────────────────────────
+const creditBalances = new Map(); // email → credits
+const CREDITS_PER_CREATION = 3;
+const FREE_CREDITS_ON_SIGNUP = 3;
+
+const CREDIT_PACKS = [
+  { id: 'starter', credits: 10, price: 19, name: 'Starter Pack 🚀', popular: false },
+  { id: 'pro',     credits: 30, price: 49, name: 'Pro Pack ⚡',     popular: true  },
+  { id: 'scale',   credits: 100, price: 149, name: 'Scale Pack 🔥', popular: false },
+];
+
+// ── STRIPE WEBHOOK — registered BEFORE express.json() ──
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const s = getStripe();
+  if (!s) return res.status(400).json({ error: 'Stripe not configured' });
+
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+  try {
+    if (webhookSecret && sig) {
+      event = s.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } else {
+      event = JSON.parse(req.body.toString());
+    }
+  } catch (err) {
+    console.error('[webhook] Error:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const email = session.metadata?.email?.toLowerCase();
+    const credits = parseInt(session.metadata?.credits || '0', 10);
+    if (email && credits > 0) {
+      const current = creditBalances.get(email) || 0;
+      creditBalances.set(email, current + credits);
+      console.log(`[credits] +${credits} 💎 → ${email} (total: ${current + credits})`);
+    }
+  }
+
+  res.json({ received: true });
+});
+
+// Global JSON parser — AFTER webhook route
+app.use(express.json());
+
+// Serve the frontend files
+app.use(express.static(path.join(__dirname)));
 
 // ─────────────────────────────────────────────
 // IN-MEMORY STORE (replace with DB later)
@@ -322,37 +371,35 @@ async function deployToVercel(slug, html) {
 }
 
 // ─────────────────────────────────────────────
-// 4. CREATE STRIPE PRODUCTS & PAYMENT LINKS
+// 4. CREATE STRIPE PRODUCTS & PAYMENT LINKS (on connected account)
 // ─────────────────────────────────────────────
-async function createStripeProducts(company) {
+async function createStripeProducts(company, connectedAccountId) {
   const s = getStripe();
-  if (!s) return null;
+  if (!s || !connectedAccountId) return null;
+
+  const commissionPct = parseFloat(process.env.FIRMZ_COMMISSION_PERCENT || '2');
+  const stripeOpts = { stripeAccount: connectedAccountId };
 
   async function makePlan(name, price, description) {
-    const product = await s.products.create({ name, description });
+    const product = await s.products.create({ name, description }, stripeOpts);
     const stripePrice = await s.prices.create({
       product: product.id,
       unit_amount: price * 100,
       currency: 'usd',
       recurring: { interval: 'month' },
-    });
+    }, stripeOpts);
     const link = await s.paymentLinks.create({
       line_items: [{ price: stripePrice.id, quantity: 1 }],
-    });
+      subscription_data: {
+        application_fee_percent: commissionPct,
+      },
+    }, stripeOpts);
     return { url: link.url, priceId: stripePrice.id, productId: product.id };
   }
 
   const [starter, pro] = await Promise.all([
-    makePlan(
-      `${company.name} — ${company.starter_name}`,
-      company.starter_price,
-      company.description
-    ),
-    makePlan(
-      `${company.name} — ${company.pro_name}`,
-      company.pro_price,
-      company.description
-    ),
+    makePlan(`${company.name} — ${company.starter_name}`, company.starter_price, company.description),
+    makePlan(`${company.name} — ${company.pro_name}`, company.pro_price, company.description),
   ]);
 
   return { starter, pro };
@@ -413,9 +460,131 @@ app.get('/api/health', (req, res) => {
       claude: !!process.env.ANTHROPIC_API_KEY,
       vercel: !!process.env.VERCEL_TOKEN,
       stripe: !!process.env.STRIPE_SECRET_KEY,
+      stripeConnect: !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CLIENT_ID),
       resend: !!process.env.RESEND_API_KEY,
     },
   });
+});
+
+// ── CREDIT PACKS ──
+app.get('/api/credits/packs', (req, res) => res.json(CREDIT_PACKS));
+
+// ── CREDIT BALANCE ──
+app.get('/api/credits/balance/:email', (req, res) => {
+  const email = req.params.email.toLowerCase();
+  if (!creditBalances.has(email)) {
+    creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
+  }
+  res.json({ email, credits: creditBalances.get(email) });
+});
+
+// ── BUY CREDITS — Stripe Checkout ──
+app.post('/api/credits/checkout', async (req, res) => {
+  const { email, packId } = req.body;
+  if (!email || !packId) return res.status(400).json({ error: 'email and packId required' });
+
+  const pack = CREDIT_PACKS.find(p => p.id === packId);
+  if (!pack) return res.status(400).json({ error: 'Invalid pack' });
+
+  const s = getStripe();
+  if (!s) return res.status(400).json({ error: 'Stripe not configured. Add STRIPE_SECRET_KEY.' });
+
+  const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const normalizedEmail = email.toLowerCase();
+
+  try {
+    const session = await s.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      customer_email: normalizedEmail,
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Firmz — ${pack.name}`,
+            description: `${pack.credits} 💎 credits · create AI companies on Firmz`,
+          },
+          unit_amount: pack.price * 100,
+        },
+        quantity: 1,
+      }],
+      success_url: `${appUrl}/forge-app.html?credits=success&email=${encodeURIComponent(normalizedEmail)}&pack=${pack.id}`,
+      cancel_url: `${appUrl}/forge-app.html?credits=cancelled`,
+      metadata: { email: normalizedEmail, credits: String(pack.credits), packId: pack.id },
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('[credits checkout]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── STRIPE CONNECT — Start OAuth ──
+app.get('/api/stripe/connect/:companyId', (req, res) => {
+  if (!process.env.STRIPE_CLIENT_ID || !process.env.STRIPE_SECRET_KEY) {
+    return res.status(400).json({ error: 'Stripe Connect not configured. Add STRIPE_CLIENT_ID + STRIPE_SECRET_KEY to .env' });
+  }
+  const company = companies.get(req.params.companyId);
+  if (!company) return res.status(404).json({ error: 'Company not found' });
+
+  const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: process.env.STRIPE_CLIENT_ID,
+    scope: 'read_write',
+    state: req.params.companyId,
+    redirect_uri: `${appUrl}/api/stripe/callback`,
+  });
+
+  res.redirect(`https://connect.stripe.com/oauth/authorize?${params}`);
+});
+
+// ── STRIPE CONNECT — OAuth Callback ──
+app.get('/api/stripe/callback', async (req, res) => {
+  const { code, state: companyId, error, error_description } = req.query;
+
+  if (error) {
+    console.error('[stripe connect error]', error, error_description);
+    return res.redirect(`/forge-app.html?stripe_error=${encodeURIComponent(error_description || error)}`);
+  }
+
+  const company = companies.get(companyId);
+  if (!company) return res.redirect('/forge-app.html?stripe_error=company_not_found');
+
+  try {
+    const s = getStripe();
+
+    // Exchange auth code for access token
+    const oauthResponse = await s.oauth.token({ grant_type: 'authorization_code', code });
+    const connectedAccountId = oauthResponse.stripe_user_id;
+
+    // Persist connected account on company
+    company.stripeAccountId = connectedAccountId;
+    company.stripeConnectedAt = new Date().toISOString();
+
+    // Create products + payment links on their Stripe account
+    const stripeLinks = await createStripeProducts(company, connectedAccountId);
+    company.stripeLinks = stripeLinks;
+
+    // Regenerate landing page HTML with real payment links
+    company.landingHtml = generateLandingHTML(company, stripeLinks);
+
+    // Redeploy to Vercel with payment links
+    if (process.env.VERCEL_TOKEN) {
+      try {
+        const dep = await deployToVercel(company.slug, company.landingHtml);
+        if (dep?.url) company.siteUrl = dep.url;
+      } catch (e) {
+        console.error('[stripe callback] Vercel redeploy error:', e.message);
+      }
+    }
+
+    console.log(`[stripe connect] ✓ ${company.name} connected → ${connectedAccountId}`);
+    res.redirect(`/forge-app.html?company=${companyId}&stripe=connected`);
+  } catch (err) {
+    console.error('[stripe callback error]', err);
+    res.redirect(`/forge-app.html?stripe_error=${encodeURIComponent(err.message)}`);
+  }
 });
 
 // ── CREATE COMPANY (SSE stream) ──
@@ -424,6 +593,25 @@ app.post('/api/create-company', async (req, res) => {
 
   if (!idea?.trim() || !name?.trim()) {
     return res.status(400).json({ error: 'idea and name are required' });
+  }
+
+  // ── CREDIT CHECK ──
+  const email = (founderEmail || '').toLowerCase();
+  if (email) {
+    if (!creditBalances.has(email)) {
+      creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
+    }
+    const userCredits = creditBalances.get(email);
+    if (userCredits < CREDITS_PER_CREATION) {
+      return res.status(402).json({
+        error: 'insufficient_credits',
+        message: `You need ${CREDITS_PER_CREATION} 💎 to create a company. You have ${userCredits}.`,
+        credits: userCredits,
+        required: CREDITS_PER_CREATION,
+      });
+    }
+    creditBalances.set(email, userCredits - CREDITS_PER_CREATION);
+    console.log(`[credits] -${CREDITS_PER_CREATION} 💎 from ${email} → remaining: ${userCredits - CREDITS_PER_CREATION}`);
   }
 
   const send = sseSetup(res);
@@ -467,30 +655,19 @@ app.post('/api/create-company', async (req, res) => {
     send('progress', { pct: 55, label: 'Configuring payments…' });
 
     // ── PAYMENTS ──
-    send('agent', { id: 'ag-payments', status: 'active', task: 'Creating Stripe products…' });
+    // Products are created AFTER the founder connects their Stripe via OAuth
+    send('agent', { id: 'ag-payments', status: 'active', task: 'Setting up Stripe Connect…' });
 
-    let stripeLinks = null;
+    const stripeLinks = null;
+    const stripeConnectEnabled = !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CLIENT_ID);
 
-    if (process.env.STRIPE_SECRET_KEY) {
-      send('log', { msg: '→ Creating Stripe products + recurring prices…', cls: 'log-info' });
-      stripeLinks = await createStripeProducts(company);
-      send('agent', { id: 'ag-payments', status: 'done', task: `Stripe live — payment links active` });
-      send('log', { msg: `✓ Stripe ${company.starter_name}: $${company.starter_price}/mo → ${stripeLinks.starter.url.slice(0, 40)}…`, cls: 'log-ok' });
-      send('log', { msg: `✓ Stripe ${company.pro_name}: $${company.pro_price}/mo → ${stripeLinks.pro.url.slice(0, 40)}…`, cls: 'log-ok' });
-
-      // Redeploy with real Stripe links embedded
-      if (process.env.VERCEL_TOKEN) {
-        send('log', { msg: '→ Redeploying site with live payment links…', cls: 'log-info' });
-        const htmlFinal = generateLandingHTML(company, stripeLinks);
-        const dep2 = await deployToVercel(company.slug, htmlFinal);
-        if (dep2?.url) {
-          siteUrl = dep2.url;
-          send('log', { msg: `✓ Site updated with live Stripe links`, cls: 'log-ok' });
-        }
-      }
+    if (stripeConnectEnabled) {
+      send('agent', { id: 'ag-payments', status: 'done', task: 'Stripe Connect ready — connect your account after launch' });
+      send('log', { msg: '✓ Stripe Connect configured — connect your account to activate payments', cls: 'log-ok' });
+      send('log', { msg: `  Firmz commission: ${process.env.FIRMZ_COMMISSION_PERCENT || '2'}% per transaction`, cls: 'log-act' });
     } else {
-      send('agent', { id: 'ag-payments', status: 'done', task: 'Add STRIPE_SECRET_KEY to activate' });
-      send('log', { msg: '○ Add STRIPE_SECRET_KEY to .env to create real payment links', cls: 'log-act' });
+      send('agent', { id: 'ag-payments', status: 'done', task: 'Add STRIPE_SECRET_KEY + STRIPE_CLIENT_ID to activate' });
+      send('log', { msg: '○ Add STRIPE_SECRET_KEY + STRIPE_CLIENT_ID to enable Stripe Connect', cls: 'log-act' });
     }
 
     send('progress', { pct: 80, label: 'Sending outreach…' });
@@ -536,6 +713,7 @@ app.post('/api/create-company', async (req, res) => {
       companyId,
       siteUrl,
       stripeLinks,
+      stripeConnectEnabled,
       company: {
         name: company.name,
         slug: company.slug,
@@ -645,6 +823,7 @@ app.listen(PORT, () => {
   console.log(`  Claude API  ${process.env.ANTHROPIC_API_KEY ? '✓ connected' : '✗ missing ANTHROPIC_API_KEY'}`);
   console.log(`  Vercel      ${process.env.VERCEL_TOKEN ? '✓ connected' : '○ optional (add VERCEL_TOKEN)'}`);
   console.log(`  Stripe      ${process.env.STRIPE_SECRET_KEY ? '✓ connected' : '○ optional (add STRIPE_SECRET_KEY)'}`);
+  console.log(`  Stripe Conn ${(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CLIENT_ID) ? '✓ enabled' : '○ optional (add STRIPE_CLIENT_ID + APP_URL)'}`);
   console.log(`  Resend      ${process.env.RESEND_API_KEY ? '✓ connected' : '○ optional (add RESEND_API_KEY)'}`);
   console.log('');
 });
