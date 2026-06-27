@@ -847,7 +847,7 @@ body {
   </div>
   <div class="home-body">
     <div class="home-greeting">
-      <h1>Good morning, Thomas. 👋</h1>
+      <h1 id="home-greeting-name">Good morning 👋</h1>
       <p>Your company earned <strong style="color:var(--green)">$148</strong> while you slept. Here's what's happening.</p>
     </div>
 
@@ -1204,7 +1204,7 @@ body {
       <div class="sb-user">
         <div class="sb-avatar">T</div>
         <div>
-          <div class="sb-uname">Thomas</div>
+          <div class="sb-uname" id="dash-uname">—</div>
           <div class="sb-uplan">🔥 3-day streak · Lvl 1</div>
         </div>
       </div>
@@ -1312,7 +1312,7 @@ body {
             <div class="chat-av av-ceo">CEO</div>
             <div>
               <div class="chat-bubble">
-                Good morning, Thomas. Here's today's briefing for <strong>PayFlow AI</strong>.
+                Good morning, <span id="ceo-greeting-name">there</span>. Here's today's briefing for <strong id="ceo-company-name">your company</strong>.
                 <div class="report-card">
                   <div class="report-title">📊 Daily Report — June 27</div>
                   <div class="report-row"><span class="report-key">Revenue today</span><span class="report-val rv-green">+$148</span></div>
@@ -1899,10 +1899,19 @@ function updateCredits() {
   });
   const fill = document.getElementById('dash-credit-bar');
   if (fill) fill.style.width = Math.min(100, (credits/3)*100) + '%';
-  // update avatar initial from userEmail
+  // update name/avatar from userEmail
   if (userEmail) {
+    const displayName = userEmail.split('@')[0];
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
     const av = document.getElementById('home-avatar');
     if (av) av.textContent = userEmail[0].toUpperCase();
+    const greetEl = document.getElementById('home-greeting-name');
+    if (greetEl) greetEl.textContent = `${greeting}, ${displayName} 👋`;
+    const unameEl = document.getElementById('dash-uname');
+    if (unameEl) unameEl.textContent = displayName;
+    const ceoName = document.getElementById('ceo-greeting-name');
+    if (ceoName) ceoName.textContent = displayName;
   }
 }
 function spendCredit() {
