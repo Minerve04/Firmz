@@ -1341,6 +1341,171 @@ app.get('/api/company/:id/html', async (req, res) => {
   res.send(company.landingHtml || generateLandingHTML(company, company.stripeLinks));
 });
 
+// ─────────────────────────────────────────────
+// AGENTS — real Claude-powered runners
+// ─────────────────────────────────────────────
+const AGENT_META = {
+  sales:   { icon: '📧', name: 'Sales Agent',   role: 'Outreach & prospecting',  color: 'rgba(16,185,129,.12)' },
+  growth:  { icon: '🌐', name: 'Growth Agent',  role: 'SEO & content',           color: 'rgba(6,182,212,.12)' },
+  ads:     { icon: '📣', name: 'Ads Agent',     role: 'Ad copy generation',      color: 'rgba(245,158,11,.12)' },
+  product: { icon: '💻', name: 'Product Agent', role: 'Roadmap & priorities',    color: 'rgba(124,58,237,.12)' },
+};
+
+async function runSalesAgent(company, config = {}) {
+  const client = getAnthropic();
+  const msg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2000,
+    messages: [{ role: 'user', content:
+`Generate 5 highly personalized cold outreach emails for this SaaS.
+Company: ${company.name} — ${company.tagline}
+ICP: ${company.icp}
+Pain solved: ${company.pain}
+Value prop: ${company.value_prop}
+Base subject: ${company.outreach_subject}
+Base body: ${company.outreach_body}
+
+Return ONLY a JSON array (no markdown):
+[{"subject":"...","body":"...","angle":"pain-led|benefit-led|curiosity|social-proof|question"}]
+Max 100 words per body. 5 different angles.` }],
+  });
+  const emails = JSON.parse((msg.content[0].text.match(/\[[\s\S]*\]/) || ['[]'])[0]);
+
+  let sent = 0;
+  const resend = getResend();
+  if (resend && config.targets?.length > 0) {
+    for (let i = 0; i < Math.min(config.targets.length, emails.length); i++) {
+      try {
+        await resend.emails.send({
+          from: `${company.name} <onboarding@resend.dev>`,
+          to: config.targets[i],
+          subject: emails[i]?.subject || company.outreach_subject,
+          text: emails[i]?.body || company.outreach_body,
+        });
+        sent++;
+      } catch(e) { console.error('[sales-agent send]', e.message); }
+    }
+  }
+  return { emailsGenerated: emails.length, emailsSent: sent, outputs: emails, generatedAt: new Date().toISOString() };
+}
+
+async function runGrowthAgent(company, config = {}) {
+  const client = getAnthropic();
+  const msg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2500,
+    messages: [{ role: 'user', content:
+`Write an SEO blog post for this SaaS product.
+Company: ${company.name} — ${company.description}
+ICP: ${company.icp}
+Pain: ${company.pain}
+
+Return ONLY JSON (no markdown):
+{"title":"50-60 chars SEO title","meta":"150-160 chars meta description","keyword":"primary keyword","outline":["H2 1","H2 2","H2 3","H2 4"],"intro":"First 2 paragraphs (~200 words)","cta":"closing call to action"}` }],
+  });
+  const article = JSON.parse((msg.content[0].text.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+  return { articlesGenerated: 1, outputs: [article], generatedAt: new Date().toISOString() };
+}
+
+async function runAdsAgent(company, config = {}) {
+  const client = getAnthropic();
+  const msg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1500,
+    messages: [{ role: 'user', content:
+`Create 3 Meta ad variations for this SaaS.
+Company: ${company.name} — ${company.tagline}
+ICP: ${company.icp}
+Pain: ${company.pain}
+Base headline: ${company.ad_headline}
+Base body: ${company.ad_body}
+
+Return ONLY a JSON array (no markdown):
+[{"headline":"max 40 chars","primary_text":"max 125 chars","cta":"Sign up|Get started|Try free|Learn more","angle":"pain|benefit|urgency|social-proof"}]
+3 variations, each different psychological angle.` }],
+  });
+  const ads = JSON.parse((msg.content[0].text.match(/\[[\s\S]*\]/) || ['[]'])[0]);
+  return { adsGenerated: ads.length, outputs: ads, generatedAt: new Date().toISOString() };
+}
+
+async function runProductAgent(company, config = {}) {
+  const client = getAnthropic();
+  const recent = (company.chatHistory || []).slice(-20).map(m => `${m.role}: ${m.content}`).join('\n');
+  const msg = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2000,
+    messages: [{ role: 'user', content:
+`You are the Product Agent for ${company.name}.
+Description: ${company.description}
+ICP: ${company.icp}
+Recent CEO conversations:\n${recent || '(none yet)'}
+
+Analyze and generate a product roadmap. Return ONLY JSON (no markdown):
+{"priorities":[{"title":"...","impact":"high|medium|low","effort":"small|medium|large","why":"one sentence"}],"insights":["...","...","..."],"nextSprint":["task 1","task 2","task 3"]}` }],
+  });
+  const roadmap = JSON.parse((msg.content[0].text.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+  return { featuresIdentified: roadmap.priorities?.length || 0, outputs: [roadmap], generatedAt: new Date().toISOString() };
+}
+
+// ── GET agents ──
+app.get('/api/agents/:companyId', requireAuth, async (req, res) => {
+  try {
+    const company = await dbGetCompany(req.params.companyId);
+    if (!company) return res.status(404).json({ error: 'Not found' });
+    if (company.founderEmail !== req.userEmail) return res.status(403).json({ error: 'Forbidden' });
+    const stored = company.agents || {};
+    const agents = Object.keys(AGENT_META).map(type => ({
+      type, ...AGENT_META[type],
+      status:  stored[type]?.status  || 'idle',
+      config:  stored[type]?.config  || {},
+      stats:   stored[type]?.stats   || {},
+      lastRun: stored[type]?.lastRun || null,
+    }));
+    res.json({ agents });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── RUN agent ──
+app.post('/api/agents/:companyId/:type/run', requireAuth, async (req, res) => {
+  const { companyId, type } = req.params;
+  if (!AGENT_META[type]) return res.status(400).json({ error: 'Unknown agent' });
+  try {
+    let company = await dbGetCompany(companyId);
+    if (!company) return res.status(404).json({ error: 'Not found' });
+    if (company.founderEmail !== req.userEmail) return res.status(403).json({ error: 'Forbidden' });
+
+    const config = company.agents?.[type]?.config || {};
+
+    const runners = { sales: runSalesAgent, growth: runGrowthAgent, ads: runAdsAgent, product: runProductAgent };
+    const result = await runners[type](company, config);
+
+    company = { ...company, agents: { ...(company.agents || {}),
+      [type]: { ...(company.agents?.[type] || {}), status: 'done', stats: result, lastRun: new Date().toISOString() }
+    }};
+    await dbSetCompany(companyId, company.founderEmail, company);
+    res.json({ success: true, result });
+  } catch(e) {
+    console.error(`[agent:${type}]`, e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── CONFIGURE agent ──
+app.patch('/api/agents/:companyId/:type', requireAuth, async (req, res) => {
+  const { companyId, type } = req.params;
+  if (!AGENT_META[type]) return res.status(400).json({ error: 'Unknown agent' });
+  try {
+    let company = await dbGetCompany(companyId);
+    if (!company) return res.status(404).json({ error: 'Not found' });
+    if (company.founderEmail !== req.userEmail) return res.status(403).json({ error: 'Forbidden' });
+    company = { ...company, agents: { ...(company.agents || {}),
+      [type]: { ...(company.agents?.[type] || {}), config: { ...(company.agents?.[type]?.config || {}), ...req.body.config } }
+    }};
+    await dbSetCompany(companyId, company.founderEmail, company);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── DASHBOARD — real Stripe data ──
 app.get('/api/dashboard/:companyId', requireAuth, async (req, res) => {
   try {

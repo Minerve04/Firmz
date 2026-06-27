@@ -653,8 +653,9 @@ body {
 .badge {
   font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 100px;
 }
-.badge-run { background: rgba(16,185,129,.12); color: var(--green); }
-.badge-idle { background: rgba(71,85,105,.12); color: var(--dim); }
+.badge-run  { background: rgba(16,185,129,.12); color: var(--green); }
+.badge-idle { background: rgba(71,85,105,.12);  color: var(--dim); }
+.badge-done { background: rgba(99,102,241,.12); color: #818cf8; }
 .badge-q { background: rgba(245,158,11,.1); color: var(--amber); }
 
 /* activity feed */
@@ -1443,11 +1444,34 @@ body {
 
     <!-- AGENTS -->
     <div class="tab-content" id="tc-agents">
-      <div class="agents-grid-dash">
-        <div class="agent-card"><div class="ac-header"><div class="ac-icon" style="background:rgba(16,185,129,.1)">📧</div><div><div class="ac-name">Sales Agent</div><div class="ac-role">Outreach & prospecting</div></div><span class="badge badge-run" style="margin-left:auto">● Running</span></div><div class="ac-tasks"><div class="ac-task-item"><span>✓</span>Scraped 200 new leads</div><div class="ac-task-item"><span>✓</span>Sent batch #12 (40 emails)</div><div class="ac-task-item"><span>⏳</span>Queued: follow-up 3 warm replies</div></div><div class="ac-footer"><span class="ac-stat">Today: <strong>23 tasks</strong></span><button class="btn btn-ghost btn-sm">Configure</button></div></div>
-        <div class="agent-card"><div class="ac-header"><div class="ac-icon" style="background:rgba(245,158,11,.1)">📣</div><div><div class="ac-name">Ads Agent</div><div class="ac-role">Meta advertising</div></div><span class="badge badge-run" style="margin-left:auto">● Running</span></div><div class="ac-tasks"><div class="ac-task-item"><span>✓</span>Launched 2 ad sets at €30/day</div><div class="ac-task-item"><span>✓</span>A/B testing 3 creatives</div><div class="ac-task-item"><span>⏳</span>Pausing underperforming ad</div></div><div class="ac-footer"><span class="ac-stat">CPL: <strong>€4.20</strong></span><button class="btn btn-ghost btn-sm">Configure</button></div></div>
-        <div class="agent-card"><div class="ac-header"><div class="ac-icon" style="background:rgba(6,182,212,.1)">🌐</div><div><div class="ac-name">Growth Agent</div><div class="ac-role">SEO & content</div></div><span class="badge badge-idle" style="margin-left:auto">Idle</span></div><div class="ac-tasks"><div class="ac-task-item"><span>✓</span>Published 2 SEO posts</div><div class="ac-task-item"><span>✓</span>Built 12 backlinks</div><div class="ac-task-item"><span>○</span>Next: content brief needed</div></div><div class="ac-footer"><span class="ac-stat">Traffic: <strong>+140%</strong> MoM</span><button class="btn btn-ghost btn-sm">Configure</button></div></div>
-        <div class="agent-card"><div class="ac-header"><div class="ac-icon" style="background:rgba(124,58,237,.1)">💻</div><div><div class="ac-name">Product Agent</div><div class="ac-role">Features & fixes</div></div><span class="badge badge-q" style="margin-left:auto">⏳ Queued</span></div><div class="ac-tasks"><div class="ac-task-item"><span>✓</span>Shipped onboarding v2</div><div class="ac-task-item"><span>✓</span>Fixed Stripe webhook</div><div class="ac-task-item"><span>⏳</span>Building: WhatsApp reminders</div></div><div class="ac-footer"><span class="ac-stat">Shipped: <strong>8 features</strong></span><button class="btn btn-ghost btn-sm">Configure</button></div></div>
+      <div class="agents-grid-dash" id="agents-real-grid">
+        <div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--dim);font-size:13px;">Loading agents…</div>
+      </div>
+    </div>
+
+    <!-- Agent output modal -->
+    <div id="agent-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#0e0e1f;border:1px solid rgba(255,255,255,.12);border-radius:20px;max-width:640px;width:100%;max-height:80vh;overflow-y:auto;padding:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div id="agent-modal-title" style="font-size:18px;font-weight:800;color:white;"></div>
+          <button onclick="closeAgentModal()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div id="agent-modal-body" style="font-size:14px;color:var(--muted);line-height:1.7;"></div>
+      </div>
+    </div>
+
+    <!-- Agent configure modal -->
+    <div id="agent-config-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#0e0e1f;border:1px solid rgba(255,255,255,.12);border-radius:20px;max-width:480px;width:100%;padding:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div id="config-modal-title" style="font-size:18px;font-weight:800;color:white;"></div>
+          <button onclick="closeConfigModal()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div id="config-modal-body"></div>
+        <div style="margin-top:20px;display:flex;gap:10px;">
+          <button onclick="saveAgentConfig()" class="btn btn-primary btn-sm" style="flex:1;">Save config</button>
+          <button onclick="closeConfigModal()" class="btn btn-ghost btn-sm">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -2143,9 +2167,216 @@ function switchTab(tab, sidebarItem) {
   if (tabContent) tabContent.classList.add('active');
   if (sidebarItem) sidebarItem.classList.add('active');
   if (tab === 'analytics') buildChart();
+  if (tab === 'agents') loadAgents();
 }
 
 /* ═══════════════ ANALYTICS CHART ═══════════════ */
+/* ═══════════════ AGENTS ═══════════════ */
+let agentConfigType = null;
+
+async function loadAgents() {
+  if (!currentCompanyId) return;
+  const grid = document.getElementById('agents-real-grid');
+  if (!grid) return;
+  try {
+    const r = await authFetch(API + '/api/agents/' + currentCompanyId);
+    if (!r.ok) return;
+    const { agents } = await r.json();
+    grid.innerHTML = agents.map(a => renderAgentCard(a)).join('');
+  } catch(e) {
+    if (e.message === 'session_expired') return;
+  }
+}
+
+function renderAgentCard(a) {
+  const badgeMap = { idle: '<span class="badge badge-idle">Idle</span>', done: '<span class="badge badge-done">✓ Done</span>', running: '<span class="badge badge-run">● Running</span>' };
+  const badge = badgeMap[a.status] || badgeMap.idle;
+  const lastRun = a.lastRun ? new Date(a.lastRun).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : null;
+  const statLine = buildAgentStat(a);
+
+  return `<div class="agent-card" id="agent-card-${a.type}">
+    <div class="ac-header">
+      <div class="ac-icon" style="background:${a.color}">${a.icon}</div>
+      <div><div class="ac-name">${a.name}</div><div class="ac-role">${a.role}</div></div>
+      <span style="margin-left:auto">${badge}</span>
+    </div>
+    <div class="ac-tasks">
+      ${buildAgentTasks(a)}
+    </div>
+    <div class="ac-footer">
+      <span class="ac-stat">${statLine}</span>
+      <div style="display:flex;gap:8px;">
+        ${a.stats?.outputs ? `<button class="btn btn-ghost btn-sm" onclick="showAgentOutput('${a.type}')">View output</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="openAgentConfig('${a.type}','${a.name}')">Configure</button>
+        <button class="btn btn-primary btn-sm" id="run-btn-${a.type}" onclick="runAgent('${a.type}')">▶ Run</button>
+      </div>
+    </div>
+    ${lastRun ? `<div style="font-size:11px;color:var(--dim);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);">Last run: ${lastRun}</div>` : ''}
+  </div>`;
+}
+
+function buildAgentTasks(a) {
+  const s = a.stats;
+  if (!s?.outputs) {
+    const defaults = {
+      sales: ['Generate personalized outreach emails','Send via Resend (optional)','Track replies per angle'],
+      growth: ['Write SEO blog post for your ICP','Generate meta + outline','Create closing CTA'],
+      ads: ['3 Meta ad copy variations','Each with a different angle','Headline + body + CTA'],
+      product: ['Analyze CEO chat history','Prioritize features by impact/effort','Generate next sprint tasks'],
+    };
+    return (defaults[a.type]||[]).map(t=>`<div class="ac-task-item"><span style="color:var(--dim)">○</span>${t}</div>`).join('');
+  }
+  if (a.type === 'sales') return `<div class="ac-task-item"><span>✓</span>${s.emailsGenerated} emails generated</div><div class="ac-task-item"><span>✓</span>${s.emailsSent > 0 ? s.emailsSent + ' sent via Resend' : 'Ready to send (add targets in Configure)'}</div>`;
+  if (a.type === 'growth') return `<div class="ac-task-item"><span>✓</span>Article: "${s.outputs?.[0]?.title?.slice(0,40)}…"</div><div class="ac-task-item"><span>✓</span>Keyword: ${s.outputs?.[0]?.keyword}</div>`;
+  if (a.type === 'ads') return `<div class="ac-task-item"><span>✓</span>${s.adsGenerated} ad variations generated</div><div class="ac-task-item"><span>✓</span>Ready to upload to Meta Ads Manager</div>`;
+  if (a.type === 'product') return `<div class="ac-task-item"><span>✓</span>${s.featuresIdentified} features identified</div>${(s.outputs?.[0]?.nextSprint||[]).slice(0,2).map(t=>`<div class="ac-task-item"><span>→</span>${t}</div>`).join('')}`;
+  return '';
+}
+
+function buildAgentStat(a) {
+  const s = a.stats;
+  if (!s?.outputs) return 'Not run yet';
+  if (a.type === 'sales')   return `Emails: <strong>${s.emailsGenerated || 0}</strong>`;
+  if (a.type === 'growth')  return `Articles: <strong>${s.articlesGenerated || 0}</strong>`;
+  if (a.type === 'ads')     return `Ads: <strong>${s.adsGenerated || 0}</strong>`;
+  if (a.type === 'product') return `Features: <strong>${s.featuresIdentified || 0}</strong>`;
+  return '';
+}
+
+async function runAgent(type) {
+  const btn = document.getElementById('run-btn-' + type);
+  if (btn) { btn.textContent = '⏳ Running…'; btn.disabled = true; }
+  try {
+    const r = await authFetch(API + '/api/agents/' + currentCompanyId + '/' + type + '/run', { method: 'POST', headers: {'Content-Type':'application/json'} });
+    const data = await r.json();
+    if (data.success) {
+      showToast('✓ ' + type.charAt(0).toUpperCase() + type.slice(1) + ' Agent done!', 'success');
+      await loadAgents();
+    } else {
+      showToast('Agent error: ' + data.error, 'error');
+    }
+  } catch(e) {
+    if (e.message !== 'session_expired') showToast('Run failed', 'error');
+  } finally {
+    if (btn) { btn.textContent = '▶ Run'; btn.disabled = false; }
+  }
+}
+
+function showAgentOutput(type) {
+  const modal = document.getElementById('agent-modal');
+  const title = document.getElementById('agent-modal-title');
+  const body  = document.getElementById('agent-modal-body');
+  if (!modal) return;
+
+  // Re-fetch from DOM state by re-loading — use cached data
+  authFetch(API + '/api/agents/' + currentCompanyId).then(r => r.json()).then(({ agents }) => {
+    const a = agents.find(x => x.type === type);
+    if (!a?.stats?.outputs) return;
+    title.textContent = a.icon + ' ' + a.name + ' — Last output';
+
+    let html = '';
+    if (type === 'sales') {
+      html = a.stats.outputs.map((e, i) => `
+        <div style="margin-bottom:20px;padding:16px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.07);">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--purple2);margin-bottom:6px;">Email ${i+1} · ${e.angle}</div>
+          <div style="font-weight:700;color:white;margin-bottom:8px;">Subject: ${e.subject}</div>
+          <div style="white-space:pre-wrap;font-size:13px;">${e.body}</div>
+        </div>`).join('');
+    } else if (type === 'growth') {
+      const art = a.stats.outputs[0];
+      html = `<div style="padding:16px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.07);">
+        <div style="font-weight:800;color:white;font-size:16px;margin-bottom:8px;">${art.title}</div>
+        <div style="font-size:12px;color:var(--cyan);margin-bottom:12px;">🔑 ${art.keyword}</div>
+        <div style="font-size:13px;color:var(--dim);margin-bottom:12px;font-style:italic;">${art.meta}</div>
+        <div style="margin-bottom:12px;"><strong>Outline:</strong><ul style="margin-left:18px;margin-top:6px;">${(art.outline||[]).map(h=>`<li style="margin-bottom:4px;">${h}</li>`).join('')}</ul></div>
+        <div style="white-space:pre-wrap;font-size:13px;margin-bottom:12px;">${art.intro}</div>
+        <div style="padding:12px;background:rgba(124,58,237,.1);border-radius:8px;font-size:13px;color:var(--purple2);"><strong>CTA:</strong> ${art.cta}</div>
+      </div>`;
+    } else if (type === 'ads') {
+      html = a.stats.outputs.map((ad, i) => `
+        <div style="margin-bottom:16px;padding:16px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.07);">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--amber,#f59e0b);margin-bottom:8px;">Variation ${i+1} · ${ad.angle}</div>
+          <div style="font-weight:800;color:white;font-size:15px;margin-bottom:6px;">${ad.headline}</div>
+          <div style="font-size:13px;margin-bottom:10px;">${ad.primary_text}</div>
+          <span style="display:inline-block;padding:4px 10px;background:rgba(124,58,237,.2);border-radius:6px;font-size:12px;font-weight:700;color:var(--purple2);">CTA: ${ad.cta}</span>
+        </div>`).join('');
+    } else if (type === 'product') {
+      const rm = a.stats.outputs[0];
+      const impactColor = { high: '#10b981', medium: '#f59e0b', low: '#64748b' };
+      html = `
+        <div style="margin-bottom:20px;">
+          <div style="font-weight:700;color:white;margin-bottom:10px;">🎯 Insights</div>
+          ${(rm.insights||[]).map(i=>`<div style="padding:8px 12px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:6px;font-size:13px;">• ${i}</div>`).join('')}
+        </div>
+        <div style="margin-bottom:20px;">
+          <div style="font-weight:700;color:white;margin-bottom:10px;">📋 Feature priorities</div>
+          ${(rm.priorities||[]).map(f=>`
+            <div style="padding:12px;background:rgba(255,255,255,.04);border-radius:10px;margin-bottom:8px;border-left:3px solid ${impactColor[f.impact]||'#475569'};">
+              <div style="font-weight:700;color:white;font-size:14px;">${f.title}</div>
+              <div style="font-size:12px;color:var(--dim);margin-top:3px;">${f.why}</div>
+              <div style="margin-top:6px;font-size:11px;"><span style="color:${impactColor[f.impact]||'#475569'}">▲ ${f.impact} impact</span> · <span style="color:var(--dim)">${f.effort} effort</span></div>
+            </div>`).join('')}
+        </div>
+        <div>
+          <div style="font-weight:700;color:white;margin-bottom:10px;">⚡ Next sprint</div>
+          ${(rm.nextSprint||[]).map(t=>`<div style="padding:8px 12px;background:rgba(124,58,237,.08);border-radius:8px;margin-bottom:6px;font-size:13px;">→ ${t}</div>`).join('')}
+        </div>`;
+    }
+
+    body.innerHTML = html;
+    modal.style.display = 'flex';
+  });
+}
+
+function closeAgentModal() {
+  document.getElementById('agent-modal').style.display = 'none';
+}
+
+function openAgentConfig(type, name) {
+  agentConfigType = type;
+  document.getElementById('config-modal-title').textContent = '⚙ Configure ' + name;
+  const bodies = {
+    sales: `<div style="margin-bottom:14px;font-size:13px;color:var(--muted);">Add prospect email addresses — the agent will send real outreach emails via Resend.</div>
+      <label style="font-size:12px;color:var(--dim);font-weight:700;display:block;margin-bottom:6px;">TARGET EMAILS (one per line)</label>
+      <textarea id="cfg-targets" rows="5" class="input" style="width:100%;resize:vertical;" placeholder="prospect@company.com&#10;ceo@startup.io&#10;founder@agency.fr"></textarea>`,
+    growth: `<div style="margin-bottom:14px;font-size:13px;color:var(--muted);">The Growth Agent generates SEO articles. No config needed — it auto-detects your ICP and keywords.</div>
+      <label style="font-size:12px;color:var(--dim);font-weight:700;display:block;margin-bottom:6px;">FOCUS TOPIC (optional)</label>
+      <input id="cfg-topic" class="input" style="width:100%;" placeholder="e.g. freelance invoicing automation">`,
+    ads: `<div style="margin-bottom:14px;font-size:13px;color:var(--muted);">The Ads Agent generates Meta ad copy ready to paste in Ads Manager.</div>
+      <label style="font-size:12px;color:var(--dim);font-weight:700;display:block;margin-bottom:6px;">TARGET AUDIENCE (optional)</label>
+      <input id="cfg-audience" class="input" style="width:100%;" placeholder="e.g. French freelancers 25-40">`,
+    product: `<div style="font-size:13px;color:var(--muted);">The Product Agent reads your CEO Chat history and generates a prioritized roadmap. No config needed — just keep chatting with your CEO!</div>`,
+  };
+  document.getElementById('config-modal-body').innerHTML = bodies[type] || '';
+  document.getElementById('agent-config-modal').style.display = 'flex';
+}
+
+async function saveAgentConfig() {
+  const type = agentConfigType;
+  let config = {};
+  if (type === 'sales') {
+    const raw = document.getElementById('cfg-targets')?.value || '';
+    config.targets = raw.split('\n').map(e=>e.trim()).filter(Boolean);
+  }
+  if (type === 'growth') config.topic = document.getElementById('cfg-topic')?.value || '';
+  if (type === 'ads') config.audience = document.getElementById('cfg-audience')?.value || '';
+
+  try {
+    await authFetch(API + '/api/agents/' + currentCompanyId + '/' + type, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ config }),
+    });
+    showToast('Config saved', 'success');
+    closeConfigModal();
+  } catch(e) { showToast('Save failed', 'error'); }
+}
+
+function closeConfigModal() {
+  document.getElementById('agent-config-modal').style.display = 'none';
+  agentConfigType = null;
+}
+
 function buildChart() {
   const el = document.getElementById('rev-chart');
   if (!el || el.children.length) return;
