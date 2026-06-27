@@ -1570,6 +1570,21 @@ let credits = 3;
 let accountBackScreen = 'screen-home';
 let userEmail = '';
 let sessionKey = localStorage.getItem('firmz_session') || '';
+
+/* Global fetch wrapper — auto-logout on 401 */
+async function authFetch(url, opts = {}) {
+  opts.headers = opts.headers || {};
+  if (sessionKey) opts.headers['x-session-key'] = sessionKey;
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    sessionKey = '';
+    localStorage.removeItem('firmz_session');
+    show('screen-splash');
+    showToast('Session expirée — reconnecte-toi', 'error');
+    throw new Error('session_expired');
+  }
+  return r;
+}
 let selectedPackId = 'pro';
 const CREDITS_PER_CREATION = 3;
 let selectedPlan = 'free';
@@ -1901,9 +1916,9 @@ async function startBuild() {
     }
 
     // Real SSE stream
-    const response = await fetch(API + '/api/create-company', {
+    const response = await authFetch(API + '/api/create-company', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-session-key': sessionKey },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idea, name: companyName, category }),
     });
 

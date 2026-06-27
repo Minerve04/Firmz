@@ -4,6 +4,115 @@ const path = require('path');
 const crypto = require('crypto');
 const Anthropic = require('@anthropic-ai/sdk');
 const cors = require('cors');
+const { Pool } = require('pg');
+
+// ─────────────────────────────────────────────
+// POSTGRESQL
+// ─────────────────────────────────────────────
+let pool = null;
+
+function getPool() {
+  if (!pool && process.env.DATABASE_URL) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    });
+  }
+  return pool;
+}
+
+async function initDB() {
+  const db = getPool();
+  if (!db) { console.log('[db] No DATABASE_URL — using in-memory storage'); return; }
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      email TEXT PRIMARY KEY,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS credits (
+      email TEXT PRIMARY KEY,
+      balance INTEGER NOT NULL DEFAULT 3
+    );
+    CREATE TABLE IF NOT EXISTS companies (
+      id TEXT PRIMARY KEY,
+      founder_email TEXT NOT NULL,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  console.log('[db] PostgreSQL tables ready');
+}
+
+// DB helpers — fall back to in-memory Maps when no DB
+async function dbGetUser(email) {
+  const db = getPool();
+  if (!db) return users.get(email) || null;
+  const r = await db.query('SELECT email, password_hash AS "passwordHash", created_at AS "createdAt" FROM users WHERE email=$1', [email]);
+  return r.rows[0] || null;
+}
+async function dbSetUser(email, data) {
+  const db = getPool();
+  if (!db) { users.set(email, data); return; }
+  await db.query(
+    'INSERT INTO users(email,password_hash,created_at) VALUES($1,$2,$3) ON CONFLICT(email) DO UPDATE SET password_hash=$2',
+    [email, data.passwordHash, data.createdAt || new Date().toISOString()]
+  );
+}
+async function dbGetCredits(email) {
+  const db = getPool();
+  if (!db) return creditBalances.get(email) ?? null;
+  const r = await db.query('SELECT balance FROM credits WHERE email=$1', [email]);
+  return r.rows[0]?.balance ?? null;
+}
+async function dbSetCredits(email, balance) {
+  const db = getPool();
+  if (!db) { creditBalances.set(email, balance); return; }
+  await db.query(
+    'INSERT INTO credits(email,balance) VALUES($1,$2) ON CONFLICT(email) DO UPDATE SET balance=$2',
+    [email, balance]
+  );
+}
+async function dbAddCredits(email, amount) {
+  const db = getPool();
+  if (!db) {
+    const cur = creditBalances.get(email) || 0;
+    creditBalances.set(email, cur + amount);
+    return cur + amount;
+  }
+  const r = await db.query(
+    'INSERT INTO credits(email,balance) VALUES($1,$2) ON CONFLICT(email) DO UPDATE SET balance=credits.balance+$2 RETURNING balance',
+    [email, amount]
+  );
+  return r.rows[0].balance;
+}
+async function dbGetCompany(id) {
+  const db = getPool();
+  if (!db) return companies.get(id) || null;
+  const r = await db.query('SELECT data FROM companies WHERE id=$1', [id]);
+  return r.rows[0]?.data || null;
+}
+async function dbSetCompany(id, founderEmail, data) {
+  const db = getPool();
+  if (!db) { companies.set(id, { ...data, founderEmail }); return; }
+  await db.query(
+    'INSERT INTO companies(id,founder_email,data,created_at) VALUES($1,$2,$3,$4) ON CONFLICT(id) DO UPDATE SET data=$3',
+    [id, founderEmail, JSON.stringify(data), data.createdAt || new Date().toISOString()]
+  );
+}
+async function dbGetUserCompanies(email) {
+  const db = getPool();
+  if (!db) {
+    return [...companies.values()]
+      .filter(c => c.founderEmail === email)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+  const r = await db.query(
+    'SELECT data FROM companies WHERE founder_email=$1 ORDER BY created_at DESC',
+    [email]
+  );
+  return r.rows.map(row => row.data);
+}
 
 const app = express();
 app.use(cors());
@@ -119,9 +228,8 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
     const email = session.metadata?.email?.toLowerCase();
     const credits = parseInt(session.metadata?.credits || '0', 10);
     if (email && credits > 0) {
-      const current = creditBalances.get(email) || 0;
-      creditBalances.set(email, current + credits);
-      console.log(`[credits] +${credits} 💎 → ${email} (total: ${current + credits})`);
+      const newTotal = await dbAddCredits(email, credits);
+      console.log(`[credits] +${credits} 💎 → ${email} (total: ${newTotal})`);
     }
   }
 
@@ -504,7 +612,7 @@ async function sendFounderEmail(email, company, siteUrl, stripeLinks) {
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
-    companies: companies.size,
+    db: !!process.env.DATABASE_URL,
     services: {
       claude: !!process.env.ANTHROPIC_API_KEY,
       vercel: !!process.env.VERCEL_TOKEN,
@@ -521,35 +629,41 @@ app.post('/api/auth/signup', async (req, res) => {
   const password = req.body.password || '';
   if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email invalide' });
   if (password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min)' });
-  if (users.has(email)) return res.status(409).json({ error: 'Ce compte existe déjà — connecte-toi' });
+
+  const existing = await dbGetUser(email);
+  if (existing) return res.status(409).json({ error: 'Ce compte existe déjà — connecte-toi' });
 
   const passwordHash = await hashPassword(password);
-  users.set(email, { passwordHash, createdAt: new Date().toISOString() });
+  await dbSetUser(email, { passwordHash, createdAt: new Date().toISOString() });
 
-  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
+  const existingCredits = await dbGetCredits(email);
+  if (existingCredits === null) await dbSetCredits(email, FREE_CREDITS_ON_SIGNUP);
+  const credits = await dbGetCredits(email);
 
   const sessionKey = generateToken();
   userSessions.set(sessionKey, { email });
   console.log(`[auth] New user: ${email}`);
-  res.json({ sessionKey, email, credits: creditBalances.get(email) });
+  res.json({ sessionKey, email, credits });
 });
 
 // ── LOGIN ──
 app.post('/api/auth/login', async (req, res) => {
   const email = (req.body.email || '').toLowerCase().trim();
   const password = req.body.password || '';
-  const user = users.get(email);
+  const user = await dbGetUser(email);
   if (!user) return res.status(401).json({ error: 'Compte introuvable — crée un compte' });
 
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) return res.status(401).json({ error: 'Mot de passe incorrect' });
 
-  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
+  const existingCredits = await dbGetCredits(email);
+  if (existingCredits === null) await dbSetCredits(email, FREE_CREDITS_ON_SIGNUP);
+  const credits = await dbGetCredits(email);
 
   const sessionKey = generateToken();
   userSessions.set(sessionKey, { email });
   console.log(`[auth] Login: ${email}`);
-  res.json({ sessionKey, email, credits: creditBalances.get(email) });
+  res.json({ sessionKey, email, credits });
 });
 
 // ── FORGOT PASSWORD ──
@@ -563,7 +677,8 @@ app.post('/api/auth/forgot', async (req, res) => {
   // Always respond OK (don't reveal if account exists)
   res.json({ sent: true });
 
-  if (!users.has(email)) return; // silently ignore unknown emails
+  const userExists = await dbGetUser(email);
+  if (!userExists) return; // silently ignore unknown emails
 
   const token = generateToken();
   resetTokens.set(token, { email, expiresAt: Date.now() + RESET_EXPIRY });
@@ -607,22 +722,26 @@ app.post('/api/auth/reset', async (req, res) => {
 
   resetTokens.delete(token); // one-time use
   const passwordHash = await hashPassword(password);
-  const user = users.get(entry.email) || { createdAt: new Date().toISOString() };
-  users.set(entry.email, { ...user, passwordHash });
+  const existingUser = await dbGetUser(entry.email) || { createdAt: new Date().toISOString() };
+  await dbSetUser(entry.email, { ...existingUser, passwordHash });
 
   // Auto-login
-  if (!creditBalances.has(entry.email)) creditBalances.set(entry.email, FREE_CREDITS_ON_SIGNUP);
+  const existingCredits = await dbGetCredits(entry.email);
+  if (existingCredits === null) await dbSetCredits(entry.email, FREE_CREDITS_ON_SIGNUP);
   const sessionKey = generateToken();
   userSessions.set(sessionKey, { email: entry.email });
   console.log(`[auth] Password reset: ${entry.email}`);
-  res.json({ sessionKey, email: entry.email, credits: creditBalances.get(entry.email) });
+  const credits = await dbGetCredits(entry.email);
+  res.json({ sessionKey, email: entry.email, credits });
 });
 
 // ── SESSION ME ──
-app.get('/api/auth/me', requireAuth, (req, res) => {
+app.get('/api/auth/me', requireAuth, async (req, res) => {
   const email = req.userEmail;
-  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
-  res.json({ email, credits: creditBalances.get(email) });
+  const existingCredits = await dbGetCredits(email);
+  if (existingCredits === null) await dbSetCredits(email, FREE_CREDITS_ON_SIGNUP);
+  const credits = await dbGetCredits(email);
+  res.json({ email, credits });
 });
 
 // ── LOGOUT ──
@@ -633,22 +752,21 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 // ── ACCOUNT — full profile + companies ──
-app.get('/api/account', requireAuth, (req, res) => {
+app.get('/api/account', requireAuth, async (req, res) => {
   const email = req.userEmail;
-  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
-  const userCompanies = [...companies.values()]
-    .filter(c => c.founderEmail === email)
-    .map(c => ({
+  const existingCredits = await dbGetCredits(email);
+  if (existingCredits === null) await dbSetCredits(email, FREE_CREDITS_ON_SIGNUP);
+  const credits = await dbGetCredits(email);
+  const userCompanies = (await dbGetUserCompanies(email)).map(c => ({
       id: c.id,
       name: c.name,
       category: c.category,
       siteUrl: c.siteUrl,
       createdAt: c.createdAt,
-    }))
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }));
   res.json({
     email,
-    credits: creditBalances.get(email),
+    credits,
     companies: userCompanies,
     companiesCount: userCompanies.length,
     creditsSpent: userCompanies.length * CREDITS_PER_CREATION,
@@ -659,10 +777,11 @@ app.get('/api/account', requireAuth, (req, res) => {
 app.get('/api/credits/packs', (req, res) => res.json(CREDIT_PACKS));
 
 // ── CREDIT BALANCE ──
-app.get('/api/credits/balance', requireAuth, (req, res) => {
+app.get('/api/credits/balance', requireAuth, async (req, res) => {
   const email = req.userEmail;
-  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
-  res.json({ email, credits: creditBalances.get(email) });
+  const existingCredits = await dbGetCredits(email);
+  if (existingCredits === null) await dbSetCredits(email, FREE_CREDITS_ON_SIGNUP);
+  res.json({ email, credits: await dbGetCredits(email) });
 });
 
 // ── BUY CREDITS — Stripe Checkout ──
@@ -707,11 +826,11 @@ app.post('/api/credits/checkout', async (req, res) => {
 });
 
 // ── STRIPE CONNECT — Start OAuth ──
-app.get('/api/stripe/connect/:companyId', (req, res) => {
+app.get('/api/stripe/connect/:companyId', async (req, res) => {
   if (!process.env.STRIPE_CLIENT_ID || !process.env.STRIPE_SECRET_KEY) {
     return res.status(400).json({ error: 'Stripe Connect not configured. Add STRIPE_CLIENT_ID + STRIPE_SECRET_KEY to .env' });
   }
-  const company = companies.get(req.params.companyId);
+  const company = await dbGetCompany(req.params.companyId);
   if (!company) return res.status(404).json({ error: 'Company not found' });
 
   const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
@@ -735,7 +854,7 @@ app.get('/api/stripe/callback', async (req, res) => {
     return res.redirect(`/forge-app.html?stripe_error=${encodeURIComponent(error_description || error)}`);
   }
 
-  const company = companies.get(companyId);
+  let company = await dbGetCompany(companyId);
   if (!company) return res.redirect('/forge-app.html?stripe_error=company_not_found');
 
   try {
@@ -745,22 +864,27 @@ app.get('/api/stripe/callback', async (req, res) => {
     const oauthResponse = await s.oauth.token({ grant_type: 'authorization_code', code });
     const connectedAccountId = oauthResponse.stripe_user_id;
 
-    // Persist connected account on company
-    company.stripeAccountId = connectedAccountId;
-    company.stripeConnectedAt = new Date().toISOString();
-
     // Create products + payment links on their Stripe account
     const stripeLinks = await createStripeProducts(company, connectedAccountId);
-    company.stripeLinks = stripeLinks;
 
-    // Regenerate landing page HTML with real payment links
-    company.landingHtml = generateLandingHTML(company, stripeLinks);
+    // Persist updated company with Stripe data
+    company = {
+      ...company,
+      stripeAccountId: connectedAccountId,
+      stripeConnectedAt: new Date().toISOString(),
+      stripeLinks,
+      landingHtml: generateLandingHTML(company, stripeLinks),
+    };
+    await dbSetCompany(companyId, company.founderEmail, company);
 
     // Redeploy to Vercel with payment links
     if (process.env.VERCEL_TOKEN) {
       try {
         const dep = await deployToVercel(company.slug, company.landingHtml);
-        if (dep?.url) company.siteUrl = dep.url;
+        if (dep?.url) {
+          company = { ...company, siteUrl: dep.url };
+          await dbSetCompany(companyId, company.founderEmail, company);
+        }
       } catch (e) {
         console.error('[stripe callback] Vercel redeploy error:', e.message);
       }
@@ -786,10 +910,8 @@ app.post('/api/create-company', requireAuth, async (req, res) => {
   // ── CREDIT CHECK ──
   const email = founderEmail;
   if (email) {
-    if (!creditBalances.has(email)) {
-      creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
-    }
-    const userCredits = creditBalances.get(email);
+    let userCredits = await dbGetCredits(email);
+    if (userCredits === null) { await dbSetCredits(email, FREE_CREDITS_ON_SIGNUP); userCredits = FREE_CREDITS_ON_SIGNUP; }
     if (userCredits < CREDITS_PER_CREATION) {
       return res.status(402).json({
         error: 'insufficient_credits',
@@ -798,7 +920,7 @@ app.post('/api/create-company', requireAuth, async (req, res) => {
         required: CREDITS_PER_CREATION,
       });
     }
-    creditBalances.set(email, userCredits - CREDITS_PER_CREATION);
+    await dbSetCredits(email, userCredits - CREDITS_PER_CREATION);
     console.log(`[credits] -${CREDITS_PER_CREATION} 💎 from ${email} → remaining: ${userCredits - CREDITS_PER_CREATION}`);
   }
 
@@ -882,15 +1004,17 @@ app.post('/api/create-company', requireAuth, async (req, res) => {
     send('agent', { id: 'ag-ceo', status: 'active', task: 'Initializing AI CEO with full context…' });
 
     const companyId = crypto.randomUUID();
-    companies.set(companyId, {
+    const companyData = {
       ...company,
+      id: companyId,
       siteUrl,
       stripeLinks,
       founderEmail,
       landingHtml: generateLandingHTML(company, stripeLinks),
       createdAt: new Date().toISOString(),
       chatHistory: [],
-    });
+    };
+    await dbSetCompany(companyId, founderEmail, companyData);
 
     send('agent', { id: 'ag-ceo', status: 'done', task: 'CEO ready — open chat to talk to your company' });
     send('log', { msg: `✓ CEO initialized with company context`, cls: 'log-ok' });
@@ -932,8 +1056,8 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'companyId and message are required' });
   }
 
-  const company = companies.get(companyId);
-  if (!company) return res.status(404).json({ error: 'Company not found. It may have been cleared on server restart.' });
+  const company = await dbGetCompany(companyId);
+  if (!company) return res.status(404).json({ error: 'Company not found.' });
 
   try {
     const client = getAnthropic();
@@ -962,7 +1086,7 @@ Your personality:
 - Keep responses concise — max 4 sentences unless depth is needed`;
 
     // Keep last 20 messages for context
-    const history = company.chatHistory.slice(-20);
+    const history = (company.chatHistory || []).slice(-20);
     history.push({ role: 'user', content: message });
 
     const msg = await client.messages.create({
@@ -974,9 +1098,12 @@ Your personality:
 
     const reply = msg.content[0].text;
 
-    // Update chat history
-    company.chatHistory.push({ role: 'user', content: message });
-    company.chatHistory.push({ role: 'assistant', content: reply });
+    // Persist updated chat history
+    const updatedHistory = [...(company.chatHistory || []),
+      { role: 'user', content: message },
+      { role: 'assistant', content: reply }
+    ];
+    await dbSetCompany(companyId, company.founderEmail, { ...company, chatHistory: updatedHistory });
 
     res.json({ reply });
   } catch (err) {
@@ -986,8 +1113,8 @@ Your personality:
 });
 
 // ── GET COMPANY ──
-app.get('/api/company/:id', (req, res) => {
-  const company = companies.get(req.params.id);
+app.get('/api/company/:id', async (req, res) => {
+  const company = await dbGetCompany(req.params.id);
   if (!company) return res.status(404).json({ error: 'Not found' });
   // Don't expose chat history or full landing HTML in this endpoint
   const { chatHistory, landingHtml, ...safe } = company;
@@ -995,8 +1122,8 @@ app.get('/api/company/:id', (req, res) => {
 });
 
 // ── DOWNLOAD LANDING PAGE HTML ──
-app.get('/api/company/:id/html', (req, res) => {
-  const company = companies.get(req.params.id);
+app.get('/api/company/:id/html', async (req, res) => {
+  const company = await dbGetCompany(req.params.id);
   if (!company) return res.status(404).send('Not found');
   res.setHeader('Content-Type', 'text/html');
   res.setHeader('Content-Disposition', `attachment; filename="${company.slug}.html"`);
@@ -1005,13 +1132,19 @@ app.get('/api/company/:id/html', (req, res) => {
 
 // Start
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`\n⬡  Forge server running → http://localhost:${PORT}`);
-  console.log(`\nServices:`);
-  console.log(`  Claude API  ${process.env.ANTHROPIC_API_KEY ? '✓ connected' : '✗ missing ANTHROPIC_API_KEY'}`);
-  console.log(`  Vercel      ${process.env.VERCEL_TOKEN ? '✓ connected' : '○ optional (add VERCEL_TOKEN)'}`);
-  console.log(`  Stripe      ${process.env.STRIPE_SECRET_KEY ? '✓ connected' : '○ optional (add STRIPE_SECRET_KEY)'}`);
-  console.log(`  Stripe Conn ${(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CLIENT_ID) ? '✓ enabled' : '○ optional (add STRIPE_CLIENT_ID + APP_URL)'}`);
-  console.log(`  Resend      ${process.env.RESEND_API_KEY ? '✓ connected' : '○ optional (add RESEND_API_KEY)'}`);
-  console.log('');
+initDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`\n⬡  Forge server running → http://localhost:${PORT}`);
+    console.log(`\nServices:`);
+    console.log(`  Claude API  ${process.env.ANTHROPIC_API_KEY ? '✓ connected' : '✗ missing ANTHROPIC_API_KEY'}`);
+    console.log(`  PostgreSQL  ${process.env.DATABASE_URL ? '✓ connected' : '○ in-memory (add DATABASE_URL)'}`);
+    console.log(`  Vercel      ${process.env.VERCEL_TOKEN ? '✓ connected' : '○ optional (add VERCEL_TOKEN)'}`);
+    console.log(`  Stripe      ${process.env.STRIPE_SECRET_KEY ? '✓ connected' : '○ optional (add STRIPE_SECRET_KEY)'}`);
+    console.log(`  Stripe Conn ${(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CLIENT_ID) ? '✓ enabled' : '○ optional (add STRIPE_CLIENT_ID + APP_URL)'}`);
+    console.log(`  Resend      ${process.env.RESEND_API_KEY ? '✓ connected' : '○ optional (add RESEND_API_KEY)'}`);
+    console.log('');
+  });
+}).catch(err => {
+  console.error('[db] Failed to initialize database:', err.message);
+  process.exit(1);
 });
