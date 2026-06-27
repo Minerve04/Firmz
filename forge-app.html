@@ -731,6 +731,22 @@ body {
 .bar-lbl { font-size: 10px; color: var(--dim); }
 
 /* add company card */
+.pm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.pm-item:hover { background: rgba(255,255,255,.06); color: white; }
+.pm-item span { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.pm-item-danger { color: #f87171; }
+.pm-item-danger:hover { background: rgba(239,68,68,.1); color: #f87171; }
 .site-chip {
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.1);
@@ -958,7 +974,48 @@ body {
         <span class="gem">💎</span>
         <span id="home-credits">3</span> credits
       </div>
-      <div class="sb-avatar" id="home-avatar" style="width:34px;height:34px;font-size:13px;cursor:pointer;" onclick="openAccount('screen-home')" title="My account">T</div>
+      <!-- Profile dropdown trigger -->
+      <div style="position:relative;">
+        <div class="sb-avatar" id="home-avatar" style="width:34px;height:34px;font-size:13px;cursor:pointer;" onclick="toggleProfileMenu(event)" title="Mon compte">T</div>
+        <!-- Dropdown menu -->
+        <div id="profile-menu" style="display:none;position:absolute;top:42px;right:0;width:220px;background:#0e0e1f;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.7);z-index:500;overflow:hidden;">
+          <!-- User info header -->
+          <div style="padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,.07);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="sb-avatar" id="pm-avatar" style="width:36px;height:36px;font-size:15px;pointer-events:none;">T</div>
+              <div style="min-width:0;">
+                <div id="pm-name" style="font-size:13px;font-weight:800;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+                <div id="pm-email" style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:7px 10px;">
+              <span style="font-size:12px;color:#a78bfa;font-weight:700;">💎 <span id="pm-credits">0</span> crédits</span>
+              <button onclick="closeProfileMenu();openBuyCredits();" style="background:linear-gradient(135deg,var(--purple),var(--purple2));border:none;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:11px;font-weight:700;">+ Recharger</button>
+            </div>
+          </div>
+          <!-- Menu items -->
+          <div style="padding:6px;">
+            <div class="pm-item" onclick="closeProfileMenu();openAccount('screen-home')">
+              <span>👤</span> Mon profil
+            </div>
+            <div class="pm-item" onclick="closeProfileMenu();goCreate()">
+              <span>⚡</span> Créer une société
+            </div>
+            <div class="pm-item" onclick="closeProfileMenu();openBuyCredits()">
+              <span>💎</span> Acheter des crédits
+            </div>
+            <div class="pm-item" onclick="closeProfileMenu();openDailyReport()" id="pm-daily-report" style="display:none;">
+              <span>📊</span> Daily report
+            </div>
+          </div>
+          <!-- Logout -->
+          <div style="padding:6px;border-top:1px solid rgba(255,255,255,.07);">
+            <div class="pm-item pm-item-danger" onclick="closeProfileMenu();logout()">
+              <span>→</span> Déconnexion
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="home-body">
@@ -2495,6 +2552,46 @@ function closeConfigModal() {
   document.getElementById('agent-config-modal').style.display = 'none';
   agentConfigType = null;
 }
+
+/* ═══════════════ PROFILE MENU ═══════════════ */
+function toggleProfileMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('profile-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display === 'block';
+  if (isOpen) { menu.style.display = 'none'; return; }
+
+  // Fill in current user info
+  const initial = userEmail ? userEmail[0].toUpperCase() : '?';
+  const name = userEmail ? (userEmail.split('@')[0].charAt(0).toUpperCase() + userEmail.split('@')[0].slice(1)) : '—';
+  const pmAv = document.getElementById('pm-avatar');
+  const pmName = document.getElementById('pm-name');
+  const pmEmail = document.getElementById('pm-email');
+  const pmCredits = document.getElementById('pm-credits');
+  if (pmAv) pmAv.textContent = initial;
+  if (pmName) pmName.textContent = name;
+  if (pmEmail) pmEmail.textContent = userEmail || '—';
+  if (pmCredits) pmCredits.textContent = credits ?? 0;
+
+  // Show Daily report item only if inside a company context
+  const pmReport = document.getElementById('pm-daily-report');
+  if (pmReport) pmReport.style.display = currentCompanyId ? 'flex' : 'none';
+
+  menu.style.display = 'block';
+}
+
+function closeProfileMenu() {
+  const menu = document.getElementById('profile-menu');
+  if (menu) menu.style.display = 'none';
+}
+
+// Close on outside click
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('profile-menu');
+  if (menu && menu.style.display === 'block' && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
 
 /* ═══════════════ SITE EDITOR ═══════════════ */
 function fillSiteEdit(prefix) {
