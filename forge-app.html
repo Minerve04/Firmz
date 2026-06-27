@@ -2197,7 +2197,18 @@ document.addEventListener('keydown', e => {
 });
 
 /* ═══════════════ MISC ═══════════════ */
-function copyUrl() { showAchievement('📋','Link copied!'); }
+function copyUrl() {
+  const url = currentSiteUrl || document.getElementById('success-url-text')?.textContent;
+  if (url) {
+    navigator.clipboard.writeText(url).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = url; el.style.position = 'fixed'; el.style.opacity = '0';
+      document.body.appendChild(el); el.select();
+      document.execCommand('copy'); document.body.removeChild(el);
+    });
+  }
+  showAchievement('📋', 'Link copied!');
+}
 
 // Daily challenge bar animation on home load
 setTimeout(() => {
