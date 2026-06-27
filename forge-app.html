@@ -816,34 +816,36 @@ body {
       </div>
     </div>
 
-    <div id="auth-form" style="max-width:420px;margin:0 auto 12px;display:flex;flex-direction:column;gap:8px;">
-      <!-- Toggle -->
-      <div style="display:flex;background:rgba(255,255,255,.06);border-radius:10px;padding:4px;margin-bottom:4px;">
-        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:8px;border:none;border-radius:7px;background:#6366f1;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Se connecter</button>
-        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:8px;border:none;border-radius:7px;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;">Créer un compte</button>
+    <div id="auth-form" style="max-width:400px;margin:0 auto 16px;">
+      <!-- Tab toggle — underline style -->
+      <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;">
+        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--text);border-bottom:2px solid var(--text);margin-bottom:-1px;transition:all .2s;font-family:inherit;">Sign in</button>
+        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;font-family:inherit;">Create account</button>
       </div>
-      <input class="input" id="auth-email-input" type="email" placeholder="votre@email.com" onkeydown="if(event.key==='Enter')document.getElementById('auth-password-input').focus()" />
-      <input class="input" id="auth-password-input" type="password" placeholder="Mot de passe" onkeydown="if(event.key==='Enter')submitAuth()" />
-      <button class="btn btn-primary btn-full btn-lg" onclick="submitAuth()" id="auth-send-btn">Se connecter →</button>
-      <div id="forgot-link-row" style="text-align:center;">
-        <span onclick="showForgotForm()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;">Mot de passe oublié ?</span>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <input class="input" id="auth-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('auth-password-input').focus()" />
+        <input class="input" id="auth-password-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')submitAuth()" />
+        <button class="btn btn-primary btn-full btn-lg" onclick="submitAuth()" id="auth-send-btn" style="margin-top:4px;">Sign in →</button>
+        <div id="forgot-link-row" style="text-align:center;padding-top:2px;">
+          <span onclick="showForgotForm()" style="font-size:12px;color:var(--muted);cursor:pointer;transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Forgot password?</span>
+        </div>
       </div>
     </div>
 
     <!-- FORGOT PASSWORD FORM -->
-    <div id="forgot-form" style="display:none;max-width:420px;margin:0 auto 12px;flex-direction:column;gap:8px;">
-      <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px;">Entre ton email — on t'envoie un lien de reset.</p>
-      <input class="input" id="forgot-email-input" type="email" placeholder="votre@email.com" onkeydown="if(event.key==='Enter')sendForgot()" />
-      <button class="btn btn-primary btn-full" onclick="sendForgot()" id="forgot-btn">Envoyer le lien →</button>
-      <div style="text-align:center;"><span onclick="showAuthFormLogin()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;">← Retour à la connexion</span></div>
+    <div id="forgot-form" style="display:none;max-width:400px;margin:0 auto 16px;flex-direction:column;gap:10px;">
+      <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px;">Enter your email — we'll send a reset link.</p>
+      <input class="input" id="forgot-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendForgot()" />
+      <button class="btn btn-primary btn-full" onclick="sendForgot()" id="forgot-btn">Send reset link →</button>
+      <div style="text-align:center;"><span onclick="showAuthFormLogin()" style="font-size:12px;color:var(--muted);cursor:pointer;">← Back to sign in</span></div>
     </div>
-    <div id="forgot-sent" style="display:none;max-width:420px;margin:0 auto 12px;padding:14px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;color:#10b981;font-size:13px;font-weight:600;text-align:center;">
-      ✓ Si ce compte existe, tu recevras un email dans quelques secondes.<br>
-      <span onclick="showAuthFormLogin()" style="font-size:12px;font-weight:400;cursor:pointer;text-decoration:underline;color:var(--muted);margin-top:6px;display:inline-block;">← Retour à la connexion</span>
+    <div id="forgot-sent" style="display:none;max-width:400px;margin:0 auto 16px;padding:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;color:#10b981;font-size:13px;font-weight:600;text-align:center;">
+      ✓ If this account exists, you'll receive an email in seconds.<br>
+      <span onclick="showAuthFormLogin()" style="font-size:12px;font-weight:400;cursor:pointer;color:var(--muted);margin-top:6px;display:inline-block;">← Back to sign in</span>
     </div>
 
-    <div id="auth-error" style="display:none;padding:12px 16px;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:600;max-width:420px;margin:0 auto 12px;">
-      ⚠️ <span id="auth-error-msg">Erreur</span>
+    <div id="auth-error" style="display:none;padding:12px 16px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:600;max-width:400px;margin:0 auto 16px;">
+      ⚠️ <span id="auth-error-msg">Error</span>
     </div>
     <p class="splash-note">Free · 3 💎 credits included · <strong style="color:var(--text)">0% commission on your revenue. Ever.</strong></p>
 
@@ -901,12 +903,12 @@ body {
 <div id="screen-reset" class="screen" style="align-items:center;justify-content:center;padding:24px;">
   <div style="max-width:380px;width:100%;text-align:center;">
     <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:var(--purple2);margin-bottom:40px;">⬡ FIRMZ</div>
-    <h2 style="font-size:26px;font-weight:900;letter-spacing:-0.5px;margin-bottom:8px;">Nouveau mot de passe</h2>
-    <p style="color:var(--muted);font-size:14px;margin-bottom:28px;">Choisis un mot de passe d'au moins 6 caractères.</p>
+    <h2 style="font-size:26px;font-weight:900;letter-spacing:-0.5px;margin-bottom:8px;">New password</h2>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:28px;">Choose a password of at least 6 characters.</p>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <input class="input" id="reset-password-input" type="password" placeholder="Nouveau mot de passe" onkeydown="if(event.key==='Enter')document.getElementById('reset-confirm-input').focus()" />
-      <input class="input" id="reset-confirm-input" type="password" placeholder="Confirme le mot de passe" onkeydown="if(event.key==='Enter')submitReset()" />
-      <button class="btn btn-primary btn-full btn-lg" onclick="submitReset()" id="reset-btn">Enregistrer →</button>
+      <input class="input" id="reset-password-input" type="password" placeholder="New password" onkeydown="if(event.key==='Enter')document.getElementById('reset-confirm-input').focus()" />
+      <input class="input" id="reset-confirm-input" type="password" placeholder="Confirm password" onkeydown="if(event.key==='Enter')submitReset()" />
+      <button class="btn btn-primary btn-full btn-lg" onclick="submitReset()" id="reset-btn">Save password →</button>
       <div id="reset-error" style="display:none;padding:12px;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:600;">
         ⚠️ <span id="reset-error-msg"></span>
       </div>
@@ -3026,8 +3028,8 @@ async function submitReset() {
   const errMsg = document.getElementById('reset-error-msg');
   errEl.style.display = 'none';
 
-  if (password.length < 6) { errMsg.textContent = '6 caractères minimum'; errEl.style.display = 'block'; return; }
-  if (password !== confirm) { errMsg.textContent = 'Les mots de passe ne correspondent pas'; errEl.style.display = 'block'; return; }
+  if (password.length < 6) { errMsg.textContent = 'Minimum 6 characters'; errEl.style.display = 'block'; return; }
+  if (password !== confirm) { errMsg.textContent = 'Passwords do not match'; errEl.style.display = 'block'; return; }
 
   const btn = document.getElementById('reset-btn');
   btn.textContent = '…'; btn.disabled = true;
@@ -3038,7 +3040,7 @@ async function submitReset() {
       body: JSON.stringify({ token: resetToken, password }),
     });
     const data = await r.json();
-    if (!r.ok) { errMsg.textContent = data.error || 'Erreur'; errEl.style.display = 'block'; btn.textContent = 'Enregistrer →'; btn.disabled = false; return; }
+    if (!r.ok) { errMsg.textContent = data.error || 'Error'; errEl.style.display = 'block'; btn.textContent = 'Save password →'; btn.disabled = false; return; }
     sessionKey = data.sessionKey;
     userEmail = data.email;
     credits = data.credits;
@@ -3049,19 +3051,21 @@ async function submitReset() {
     show('screen-home');
     showAchievement('🔑', 'Mot de passe mis à jour !');
   } catch {
-    errMsg.textContent = 'Erreur réseau'; errEl.style.display = 'block';
-    btn.textContent = 'Enregistrer →'; btn.disabled = false;
+    errMsg.textContent = 'Network error — try again'; errEl.style.display = 'block';
+    btn.textContent = 'Save password →'; btn.disabled = false;
   }
 }
 
 function switchAuthTab(mode) {
   authMode = mode;
   const isLogin = mode === 'login';
-  document.getElementById('tab-login').style.background = isLogin ? '#6366f1' : 'transparent';
-  document.getElementById('tab-login').style.color = isLogin ? '#fff' : 'var(--muted)';
-  document.getElementById('tab-signup').style.background = isLogin ? 'transparent' : '#6366f1';
-  document.getElementById('tab-signup').style.color = isLogin ? 'var(--muted)' : '#fff';
-  document.getElementById('auth-send-btn').textContent = isLogin ? 'Se connecter →' : 'Créer mon compte →';
+  const tl = document.getElementById('tab-login');
+  const ts = document.getElementById('tab-signup');
+  tl.style.color = isLogin ? 'var(--text)' : 'var(--muted)';
+  tl.style.borderBottomColor = isLogin ? 'var(--text)' : 'transparent';
+  ts.style.color = isLogin ? 'var(--muted)' : 'var(--text)';
+  ts.style.borderBottomColor = isLogin ? 'transparent' : 'var(--text)';
+  document.getElementById('auth-send-btn').textContent = isLogin ? 'Sign in →' : 'Create account →';
   document.getElementById('auth-error').style.display = 'none';
 }
 
@@ -3073,8 +3077,8 @@ function showAuthError(msg) {
 async function submitAuth() {
   const email = document.getElementById('auth-email-input')?.value?.trim();
   const password = document.getElementById('auth-password-input')?.value || '';
-  if (!email || !email.includes('@')) { showAuthError('Email invalide'); return; }
-  if (!password) { showAuthError('Entre ton mot de passe'); return; }
+  if (!email || !email.includes('@')) { showAuthError('Invalid email address'); return; }
+  if (!password) { showAuthError('Please enter your password'); return; }
 
   const btn = document.getElementById('auth-send-btn');
   if (btn) { btn.textContent = '…'; btn.disabled = true; }
@@ -3090,7 +3094,7 @@ async function submitAuth() {
     const data = await r.json();
     if (!r.ok) {
       showAuthError(data.error || 'Erreur — réessaie');
-      if (btn) { btn.textContent = authMode === 'login' ? 'Se connecter →' : 'Créer mon compte →'; btn.disabled = false; }
+      if (btn) { btn.textContent = authMode === 'login' ? 'Sign in →' : 'Create account →'; btn.disabled = false; }
       return;
     }
     sessionKey = data.sessionKey;
@@ -3107,8 +3111,8 @@ async function submitAuth() {
       showAchievement('👋', 'Bon retour !');
     }
   } catch (err) {
-    showAuthError('Erreur réseau — réessaie');
-    if (btn) { btn.textContent = authMode === 'login' ? 'Se connecter →' : 'Créer mon compte →'; btn.disabled = false; }
+    showAuthError('Network error — please try again');
+    if (btn) { btn.textContent = authMode === 'login' ? 'Sign in →' : 'Create account →'; btn.disabled = false; }
   }
 }
 
