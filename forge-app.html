@@ -146,54 +146,106 @@ body {
    SCREEN: SPLASH
 ═══════════════════════════════════════ */
 #screen-splash {
-  align-items: center; justify-content: center;
+  align-items: stretch; justify-content: flex-start;
   background: var(--bg);
-  padding: 40px 20px;
+  flex-direction: column;
 }
-.splash-inner { max-width: 560px; width: 100%; text-align: center; }
-.splash-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,.04); border: 1px solid var(--border2);
-  border-radius: 100px; padding: 6px 16px; font-size: 12px;
-  color: var(--muted); margin-bottom: 28px; font-weight: 500;
+
+/* top nav bar */
+.splash-nav {
+  padding: 0 48px; height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.splash-nav-links { display: flex; align-items: center; gap: 6px; }
+
+/* hero section */
+.splash-hero {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 80px 24px 60px;
+  max-width: 680px; margin: 0 auto; width: 100%;
 }
 .splash-h1 {
-  font-size: clamp(38px,7vw,64px); font-weight: 800;
-  letter-spacing: -2.5px; line-height: 1.05; margin-bottom: 20px;
+  font-size: clamp(48px, 8.5vw, 88px);
+  font-weight: 800; letter-spacing: -3px; line-height: 1.0;
+  margin-bottom: 24px;
 }
-.grad { background: linear-gradient(135deg,#c7d2fe 0%,#818cf8 50%,#c7d2fe 100%); background-size: 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: shimmer 4s linear infinite; }
+.grad {
+  background: linear-gradient(135deg,#c7d2fe 0%,#818cf8 50%,#c7d2fe 100%);
+  background-size: 200%; -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
 @keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
-.splash-sub { font-size: 16px; color: var(--muted); margin-bottom: 36px; line-height: 1.7; }
-
-/* FOMO ticker on splash */
-.fomo-ticker {
-  background: rgba(255,255,255,.03); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 12px 16px; margin-bottom: 32px;
-  text-align: left; overflow: hidden; height: 44px; position: relative;
+.splash-sub {
+  font-size: 17px; color: var(--muted); line-height: 1.75;
+  max-width: 480px; margin: 0 auto 40px;
 }
+.splash-cta-row {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  justify-content: center; margin-bottom: 16px;
+}
+.splash-note {
+  font-size: 12px; color: var(--dim); margin-top: 14px; letter-spacing: .01em;
+}
+
+/* stats row */
+.splash-stats {
+  display: flex; align-items: stretch; border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); width: 100%;
+  margin: 0;
+}
+.splash-stat {
+  flex: 1; padding: 28px 20px; text-align: center;
+  border-right: 1px solid var(--border);
+}
+.splash-stat:last-child { border-right: none; }
+.splash-stat-n {
+  font-size: 28px; font-weight: 800; letter-spacing: -1px;
+  line-height: 1; margin-bottom: 6px;
+}
+.splash-stat-l { font-size: 12px; color: var(--muted); }
+
+/* auth section */
+.splash-auth-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 60px 24px 80px; width: 100%;
+}
+.splash-auth-inner { width: 100%; max-width: 380px; }
+.splash-auth-inner h2 {
+  font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+  margin-bottom: 6px; text-align: center;
+}
+.splash-auth-inner .splash-auth-sub {
+  font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 28px;
+}
+
+/* diff bar */
+.diff-bar {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; margin-bottom: 24px;
+}
+.diff-bar-item { padding: 14px 16px; text-align: center; }
+.diff-bar-item + .diff-bar-item { border-left: 1px solid var(--border); background: rgba(255,255,255,.015); }
+.diff-bar-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); font-weight: 600; margin-bottom: 5px; }
+.diff-bar-val { font-size: 20px; font-weight: 900; }
+.diff-bar-desc { font-size: 11px; color: var(--dim); margin-top: 3px; }
+
+/* ticker (hidden on splash, used on home) */
+.fomo-ticker { display: none; }
 .ticker-items { position: absolute; }
 .ticker-item { font-size: 13px; color: var(--muted); padding: 4px 0; white-space: nowrap; }
 .ticker-item strong { color: var(--text); }
 .ticker-item .amount { color: var(--green); font-weight: 700; }
-.splash-note { font-size: 12px; color: var(--dim); margin-top: 14px; }
-.splash-note a { color: var(--purple2); text-decoration: none; }
 
-/* live leaderboard on splash */
-.splash-lb {
-  margin-top: 36px; background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); overflow: hidden; text-align: left;
-}
-.splash-lb-head {
-  padding: 12px 20px; border-bottom: 1px solid var(--border);
-  font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
-  color: var(--dim); font-weight: 700; display: flex; justify-content: space-between;
-}
-.splash-lb-row {
-  padding: 13px 20px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 14px; font-size: 13.5px;
-}
-.splash-lb-row:last-child { border-bottom: none; }
-.lb-rank { font-size: 18px; font-weight: 900; width: 24px; flex-shrink: 0; }
+/* leaderboard (on home, not splash) */
+.splash-lb { display: none; }
+.splash-lb-head { display: none; }
+.splash-lb-row { display: none; }
+.lb-rank { display: none; }
 .rank-gold { color: #fbbf24; }
 .rank-silver { color: #94a3b8; }
 .rank-bronze { color: #d97706; }
@@ -797,106 +849,103 @@ body {
 
 <!-- ═══════════ SPLASH ═══════════ -->
 <div id="screen-splash" class="screen active">
-  <div class="splash-inner">
-    <div class="splash-badge">
-      <span class="dot-live"></span>
-      0% commission · You keep 100% of everything you earn
+
+  <!-- NAV -->
+  <nav class="splash-nav">
+    <a class="logo" href="#">Firmz</a>
+    <div class="splash-nav-links">
+      <button onclick="switchAuthTab('login');document.getElementById('auth-anchor').scrollIntoView({behavior:'smooth'})" class="btn btn-ghost" style="font-size:13px;padding:9px 18px;">Sign in</button>
+      <button onclick="switchAuthTab('signup');document.getElementById('auth-anchor').scrollIntoView({behavior:'smooth'})" class="btn btn-primary" style="font-size:13px;padding:9px 18px;">Get started free</button>
     </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="splash-hero">
     <h1 class="splash-h1">
       Launch your company.<br>
       <span class="grad">Keep everything</span><br>
       you earn.
     </h1>
-    <p class="splash-sub">Describe your idea. Firmz builds the product, ships the website, runs the ads and emails customers — fully autonomous. Without taking a cent of your revenue.</p>
-
-    <!-- FOMO TICKER -->
-    <div class="fomo-ticker">
-      <div class="ticker-items" id="ticker">
-        <div class="ticker-item">💰 <strong>Nexvora AI</strong> just received <span class="amount">$149</span> — kept 100%</div>
-      </div>
+    <p class="splash-sub">Describe your idea. Firmz builds the product, ships the website, runs the ads and emails customers — fully autonomous. 0% commission, always.</p>
+    <div class="splash-cta-row">
+      <button onclick="switchAuthTab('signup');document.getElementById('auth-anchor').scrollIntoView({behavior:'smooth'})" class="btn btn-primary btn-xl">Start for free →</button>
+      <button onclick="switchAuthTab('login');document.getElementById('auth-anchor').scrollIntoView({behavior:'smooth'})" class="btn btn-ghost btn-lg">Sign in</button>
     </div>
+    <p class="splash-note">3 credits free · No credit card · 0% commission on your revenue</p>
+  </div>
 
-    <div id="auth-form" style="max-width:400px;margin:0 auto 16px;">
-      <!-- Tab toggle — underline style -->
-      <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;">
-        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--text);border-bottom:2px solid var(--text);margin-bottom:-1px;transition:all .2s;font-family:inherit;">Sign in</button>
-        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;font-family:inherit;">Create account</button>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <input class="input" id="auth-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('auth-password-input').focus()" />
-        <input class="input" id="auth-password-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')submitAuth()" />
-        <button class="btn btn-primary btn-full btn-lg" onclick="submitAuth()" id="auth-send-btn" style="margin-top:4px;">Sign in →</button>
-        <div id="forgot-link-row" style="text-align:center;padding-top:2px;">
-          <span onclick="showForgotForm()" style="font-size:12px;color:var(--muted);cursor:pointer;transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Forgot password?</span>
-        </div>
-      </div>
+  <!-- STATS STRIP -->
+  <div class="splash-stats">
+    <div class="splash-stat">
+      <div class="splash-stat-n">8,400+</div>
+      <div class="splash-stat-l">companies founded</div>
     </div>
-
-    <!-- FORGOT PASSWORD FORM -->
-    <div id="forgot-form" style="display:none;max-width:400px;margin:0 auto 16px;flex-direction:column;gap:10px;">
-      <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px;">Enter your email — we'll send a reset link.</p>
-      <input class="input" id="forgot-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendForgot()" />
-      <button class="btn btn-primary btn-full" onclick="sendForgot()" id="forgot-btn">Send reset link →</button>
-      <div style="text-align:center;"><span onclick="showAuthFormLogin()" style="font-size:12px;color:var(--muted);cursor:pointer;">← Back to sign in</span></div>
+    <div class="splash-stat">
+      <div class="splash-stat-n" style="color:var(--green);">0%</div>
+      <div class="splash-stat-l">commission on revenue</div>
     </div>
-    <div id="forgot-sent" style="display:none;max-width:400px;margin:0 auto 16px;padding:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;color:#10b981;font-size:13px;font-weight:600;text-align:center;">
-      ✓ If this account exists, you'll receive an email in seconds.<br>
-      <span onclick="showAuthFormLogin()" style="font-size:12px;font-weight:400;cursor:pointer;color:var(--muted);margin-top:6px;display:inline-block;">← Back to sign in</span>
-    </div>
-
-    <div id="auth-error" style="display:none;padding:12px 16px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:600;max-width:400px;margin:0 auto 16px;">
-      ⚠️ <span id="auth-error-msg">Error</span>
-    </div>
-    <p class="splash-note">Free · 3 💎 credits included · <strong style="color:var(--text)">0% commission on your revenue. Ever.</strong></p>
-
-    <!-- DIFFERENTIATOR STRIP -->
-    <div style="margin-top:28px;margin-bottom:20px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;font-size:12px;text-align:center;">
-        <div style="padding:14px 16px;border-right:1px solid var(--border);">
-          <div style="color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:6px;">Others</div>
-          <div style="font-size:18px;font-weight:900;color:var(--red);">−20%</div>
-          <div style="color:var(--dim);font-size:11px;margin-top:2px;">cut on every dollar you earn</div>
-        </div>
-        <div style="padding:14px 16px;background:rgba(255,255,255,.02);">
-          <div style="color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:6px;">Firmz</div>
-          <div style="font-size:18px;font-weight:900;color:var(--green);">0%</div>
-          <div style="color:var(--muted);font-size:11px;margin-top:2px;">you keep it all, always</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MINI LEADERBOARD -->
-    <div class="splash-lb">
-      <div class="splash-lb-head">
-        <span>Top earners this week</span>
-        <span style="display:flex;align-items:center;gap:6px;"><span class="dot-live"></span> Live</span>
-      </div>
-      <div class="splash-lb-row">
-        <span class="lb-rank rank-gold">01</span>
-        <div>
-          <div class="lb-name">Nexvora AI</div>
-          <div class="lb-meta">SaaS · 333 sales · 18 days old</div>
-        </div>
-        <div class="lb-rev">$1,686</div>
-      </div>
-      <div class="splash-lb-row">
-        <span class="lb-rank rank-silver">02</span>
-        <div>
-          <div class="lb-name">Stackify Corp</div>
-          <div class="lb-meta">Service · 91 sales · 12 days old</div>
-        </div>
-        <div class="lb-rev">$1,146</div>
-      </div>
-      <div class="splash-lb-row">
-        <span class="lb-rank rank-bronze">03</span>
-        <div>
-          <div class="lb-name">Lumio Labs</div>
-          <div class="lb-meta">B2B tool · 47 sales · 9 days old</div>
-        </div>
-        <div class="lb-rev">$427</div>
-      </div>
+    <div class="splash-stat">
+      <div class="splash-stat-n">$1.2M</div>
+      <div class="splash-stat-l">earned by founders</div>
     </div>
   </div>
+
+  <!-- AUTH SECTION -->
+  <div class="splash-auth-wrap" id="auth-anchor">
+    <div class="splash-auth-inner">
+
+      <h2>Create your account</h2>
+      <p class="splash-auth-sub">One idea. One minute. Live forever.</p>
+
+      <!-- Diff bar -->
+      <div class="diff-bar">
+        <div class="diff-bar-item">
+          <div class="diff-bar-label">Others</div>
+          <div class="diff-bar-val" style="color:var(--red);">−20%</div>
+          <div class="diff-bar-desc">cut on every dollar</div>
+        </div>
+        <div class="diff-bar-item">
+          <div class="diff-bar-label">Firmz</div>
+          <div class="diff-bar-val" style="color:var(--green);">0%</div>
+          <div class="diff-bar-desc">you keep it all</div>
+        </div>
+      </div>
+
+      <!-- Auth form -->
+      <div id="auth-form">
+        <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;">
+          <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;font-family:inherit;">Sign in</button>
+          <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--text);border-bottom:2px solid var(--text);margin-bottom:-1px;transition:all .2s;font-family:inherit;">Create account</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <input class="input" id="auth-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('auth-password-input').focus()" />
+          <input class="input" id="auth-password-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')submitAuth()" />
+          <button class="btn btn-primary btn-full btn-lg" onclick="submitAuth()" id="auth-send-btn" style="margin-top:4px;">Create account →</button>
+          <div id="forgot-link-row" style="text-align:center;padding-top:4px;">
+            <span onclick="showForgotForm()" style="font-size:12px;color:var(--muted);cursor:pointer;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Forgot password?</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forgot password -->
+      <div id="forgot-form" style="display:none;flex-direction:column;gap:10px;">
+        <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px;">Enter your email — we'll send a reset link.</p>
+        <input class="input" id="forgot-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendForgot()" />
+        <button class="btn btn-primary btn-full" onclick="sendForgot()" id="forgot-btn">Send reset link →</button>
+        <div style="text-align:center;"><span onclick="showAuthFormLogin()" style="font-size:12px;color:var(--muted);cursor:pointer;">← Back to sign in</span></div>
+      </div>
+      <div id="forgot-sent" style="display:none;padding:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;color:#10b981;font-size:13px;font-weight:600;text-align:center;">
+        ✓ If this account exists, you'll receive an email in seconds.<br>
+        <span onclick="showAuthFormLogin()" style="font-size:12px;font-weight:400;cursor:pointer;color:var(--muted);margin-top:6px;display:inline-block;">← Back to sign in</span>
+      </div>
+
+      <div id="auth-error" style="display:none;padding:12px 16px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:600;margin-top:8px;">
+        ⚠️ <span id="auth-error-msg">Error</span>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══════════ RESET PASSWORD ═══════════ -->
@@ -2997,7 +3046,7 @@ function showAuthFormLogin() {
   document.getElementById('forgot-form').style.display = 'none';
   document.getElementById('forgot-sent').style.display = 'none';
   document.getElementById('auth-error').style.display = 'none';
-  switchAuthTab('login');
+  switchAuthTab('signup');
 }
 
 async function sendForgot() {
