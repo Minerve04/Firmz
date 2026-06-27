@@ -839,7 +839,7 @@ body {
         <span class="gem">💎</span>
         <span id="home-credits">3</span> credits
       </div>
-      <div class="sb-avatar" style="width:34px;height:34px;font-size:13px;cursor:pointer;">T</div>
+      <div class="sb-avatar" id="home-avatar" style="width:34px;height:34px;font-size:13px;cursor:pointer;" onclick="openAccount('screen-home')" title="My account">T</div>
     </div>
   </div>
   <div class="home-body">
@@ -1194,7 +1194,7 @@ body {
       <div class="sb-section-label">You</div>
       <div class="sb-item" onclick="goHome()"><span>🏠</span> My companies</div>
       <div class="sb-item"><span>🏆</span> Achievements</div>
-      <div class="sb-item"><span>⚙️</span> Settings</div>
+      <div class="sb-item" onclick="openAccount('screen-dashboard')"><span>⚙️</span> My account</div>
     </div>
 
     <div class="sb-footer">
@@ -1407,9 +1407,62 @@ body {
   </div>
 </div>
 
+<!-- ═══════════ ACCOUNT SCREEN ═══════════ -->
+<div id="screen-account" class="screen" style="display:none;background:var(--bg);min-height:100vh;padding:0;">
+  <div style="max-width:640px;margin:0 auto;padding:32px 20px 60px;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:36px;">
+      <button onclick="show(accountBackScreen||'screen-home')" style="background:rgba(255,255,255,.07);border:none;color:var(--text);width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">←</button>
+      <span class="logo" style="font-size:18px;">⬡ FIRMZ</span>
+    </div>
+    <!-- Avatar + email -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:32px;">
+      <div id="acct-avatar" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;flex-shrink:0;">?</div>
+      <div>
+        <div id="acct-email" style="font-size:17px;font-weight:700;letter-spacing:-0.3px;">loading…</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:3px;">Firmz account</div>
+      </div>
+      <button onclick="logout()" style="margin-left:auto;background:rgba(255,60,60,.1);border:1px solid rgba(255,60,60,.25);color:#ff6b6b;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600;">Log out</button>
+    </div>
+    <!-- Credits card -->
+    <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:22px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">Current balance</div>
+          <div style="font-size:36px;font-weight:900;letter-spacing:-1px;line-height:1;">💎 <span id="acct-credits">–</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;"><span id="acct-credits-spent">0</span> credits used so far</div>
+        </div>
+        <button onclick="openBuyCredits()" style="background:linear-gradient(135deg,var(--purple),var(--purple2));border:none;color:#fff;border-radius:12px;padding:12px 20px;cursor:pointer;font-size:14px;font-weight:800;">+ Buy credits</button>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;">
+        <div id="acct-credit-bar" style="height:100%;background:linear-gradient(90deg,var(--purple),var(--purple2));border-radius:99px;transition:width .4s;width:50%;"></div>
+      </div>
+    </div>
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
+        <div id="acct-company-count" style="font-size:28px;font-weight:900;">0</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Companies built</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-size:28px;font-weight:900;">💎 3</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Cost per company</div>
+      </div>
+    </div>
+    <!-- My companies -->
+    <div style="margin-bottom:24px;">
+      <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;margin-bottom:12px;">My companies</div>
+      <div id="acct-companies-list"><div style="color:var(--muted);font-size:14px;text-align:center;padding:32px 0;">Loading…</div></div>
+    </div>
+    <!-- CTA -->
+    <button class="btn btn-primary btn-full btn-lg" onclick="show('screen-home');setTimeout(goCreate,100);" style="font-size:15px;font-weight:800;">⚡ Build another company →</button>
+  </div>
+</div>
+
 <script>
 /* ═══════════════ STATE ═══════════════ */
 let credits = 3;
+let accountBackScreen = 'screen-home';
 let userEmail = '';
 let sessionKey = localStorage.getItem('firmz_session') || '';
 let selectedPackId = 'pro';
@@ -1835,6 +1888,11 @@ function updateCredits() {
   });
   const fill = document.getElementById('dash-credit-bar');
   if (fill) fill.style.width = Math.min(100, (credits/3)*100) + '%';
+  // update avatar initial from userEmail
+  if (userEmail) {
+    const av = document.getElementById('home-avatar');
+    if (av) av.textContent = userEmail[0].toUpperCase();
+  }
 }
 function spendCredit() {
   if (credits <= 0) { showAchievement('💸','No credits left — upgrade!'); return; }
@@ -2085,6 +2143,47 @@ function logout() {
   localStorage.removeItem('firmz_session');
   localStorage.removeItem('firmz_email');
   show('screen-splash');
+}
+
+async function openAccount(backScreen) {
+  if (!sessionKey) { show('screen-splash'); return; }
+  accountBackScreen = backScreen || 'screen-home';
+  show('screen-account');
+  // pre-fill from current state while fetching
+  document.getElementById('acct-avatar').textContent = userEmail ? userEmail[0].toUpperCase() : '?';
+  document.getElementById('acct-email').textContent = userEmail || '…';
+  document.getElementById('acct-credits').textContent = credits;
+  try {
+    const r = await fetch(API + '/api/account', { headers: authHeaders() });
+    if (!r.ok) return;
+    const d = await r.json();
+    credits = d.credits;
+    updateCredits();
+    document.getElementById('acct-avatar').textContent = d.email[0].toUpperCase();
+    document.getElementById('acct-email').textContent = d.email;
+    document.getElementById('acct-credits').textContent = d.credits;
+    document.getElementById('acct-credits-spent').textContent = d.creditsSpent;
+    document.getElementById('acct-company-count').textContent = d.companiesCount;
+    // credit bar: show remaining vs a "nice" max
+    const maxCredits = Math.max(d.credits + d.creditsSpent, 10);
+    document.getElementById('acct-credit-bar').style.width = Math.round((d.credits / maxCredits) * 100) + '%';
+    // companies list
+    const list = document.getElementById('acct-companies-list');
+    if (!d.companies.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:14px;text-align:center;padding:32px 0;">No companies yet — build your first one!</div>';
+    } else {
+      list.innerHTML = d.companies.map(c => `
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:8px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🏢</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:14px;">${c.name}</div>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px;">${c.category || 'AI Company'} · ${new Date(c.createdAt).toLocaleDateString()}</div>
+          </div>
+          ${c.siteUrl ? `<a href="${c.siteUrl}" target="_blank" style="font-size:12px;color:var(--purple2);text-decoration:none;flex-shrink:0;">↗ Visit</a>` : ''}
+        </div>
+      `).join('');
+    }
+  } catch(e) { console.error('account fetch failed', e); }
 }
 
 /* ═══════════════ CREDIT SYSTEM ═══════════════ */

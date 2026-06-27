@@ -566,6 +566,29 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── ACCOUNT — full profile + companies ──
+app.get('/api/account', requireAuth, (req, res) => {
+  const email = req.userEmail;
+  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
+  const userCompanies = [...companies.values()]
+    .filter(c => c.founderEmail === email)
+    .map(c => ({
+      id: c.id,
+      name: c.name,
+      category: c.category,
+      siteUrl: c.siteUrl,
+      createdAt: c.createdAt,
+    }))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({
+    email,
+    credits: creditBalances.get(email),
+    companies: userCompanies,
+    companiesCount: userCompanies.length,
+    creditsSpent: userCompanies.length * CREDITS_PER_CREATION,
+  });
+});
+
 // ── CREDIT PACKS ──
 app.get('/api/credits/packs', (req, res) => res.json(CREDIT_PACKS));
 
@@ -797,7 +820,7 @@ app.post('/api/create-company', requireAuth, async (req, res) => {
       ...company,
       siteUrl,
       stripeLinks,
-      founderEmail: founderEmail || null,
+      founderEmail,
       landingHtml: generateLandingHTML(company, stripeLinks),
       createdAt: new Date().toISOString(),
       chatHistory: [],
