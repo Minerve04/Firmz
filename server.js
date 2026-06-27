@@ -548,6 +548,72 @@ app.post('/api/auth/login', async (req, res) => {
   res.json({ sessionKey, email, credits: creditBalances.get(email) });
 });
 
+// ── FORGOT PASSWORD ──
+const resetTokens = new Map(); // token → { email, expiresAt }
+const RESET_EXPIRY = 30 * 60 * 1000; // 30 min
+
+app.post('/api/auth/forgot', async (req, res) => {
+  const email = (req.body.email || '').toLowerCase().trim();
+  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email invalide' });
+
+  // Always respond OK (don't reveal if account exists)
+  res.json({ sent: true });
+
+  if (!users.has(email)) return; // silently ignore unknown emails
+
+  const token = generateToken();
+  resetTokens.set(token, { email, expiresAt: Date.now() + RESET_EXPIRY });
+  setTimeout(() => resetTokens.delete(token), RESET_EXPIRY);
+
+  const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const link = `${appUrl}/?reset=${token}`;
+
+  const r = getResend();
+  if (r) {
+    try {
+      await r.emails.send({
+        from: process.env.RESEND_FROM || 'Firmz <onboarding@resend.dev>',
+        to: email,
+        subject: '⬡ Réinitialisation de ton mot de passe Firmz',
+        html: `
+<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:40px 24px;background:#07070f;color:#f1f5f9;">
+  <p style="font-size:36px;margin:0 0 16px;">⬡</p>
+  <h1 style="font-size:22px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">Réinitialise ton mot de passe</h1>
+  <p style="color:#94a3b8;margin:0 0 28px;">Clique sur le bouton ci-dessous pour choisir un nouveau mot de passe. Le lien expire dans 30 minutes.</p>
+  <a href="${link}" style="display:inline-block;padding:14px 28px;background:#7c3aed;color:white;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;">Réinitialiser mon mot de passe →</a>
+  <p style="color:#475569;font-size:12px;margin:24px 0 0;">Si tu n'as pas demandé cela, ignore cet email.</p>
+</div>`,
+      });
+    } catch (e) {
+      console.error('[auth] Reset email error:', e.message);
+    }
+  }
+  console.log(`[auth] Reset link for ${email}: ${link}`);
+});
+
+// ── RESET PASSWORD ──
+app.post('/api/auth/reset', async (req, res) => {
+  const { token, password } = req.body;
+  const entry = token && resetTokens.get(token);
+  if (!entry || Date.now() > entry.expiresAt) {
+    resetTokens.delete(token);
+    return res.status(401).json({ error: 'Lien expiré ou invalide — demande-en un nouveau.' });
+  }
+  if (!password || password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min)' });
+
+  resetTokens.delete(token); // one-time use
+  const passwordHash = await hashPassword(password);
+  const user = users.get(entry.email) || { createdAt: new Date().toISOString() };
+  users.set(entry.email, { ...user, passwordHash });
+
+  // Auto-login
+  if (!creditBalances.has(entry.email)) creditBalances.set(entry.email, FREE_CREDITS_ON_SIGNUP);
+  const sessionKey = generateToken();
+  userSessions.set(sessionKey, { email: entry.email });
+  console.log(`[auth] Password reset: ${entry.email}`);
+  res.json({ sessionKey, email: entry.email, credits: creditBalances.get(entry.email) });
+});
+
 // ── SESSION ME ──
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const email = req.userEmail;
