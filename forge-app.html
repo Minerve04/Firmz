@@ -1953,6 +1953,7 @@ async function startBuild() {
     }
 
   } catch (err) {
+    if (err.message === 'session_expired') return; // handled by authFetch
     console.error(err);
     clearInterval(emojiInterval);
     document.getElementById('build-emoji').textContent = '❌';
@@ -2137,7 +2138,7 @@ async function sendChat() {
   addTypingIndicator();
 
   try {
-    const res = await fetch(API + '/api/chat', {
+    const res = await authFetch(API + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ companyId: currentCompanyId, message: msg }),
@@ -2399,7 +2400,7 @@ async function openAccount(backScreen) {
   document.getElementById('acct-email').textContent = userEmail || '…';
   document.getElementById('acct-credits').textContent = credits;
   try {
-    const r = await fetch(API + '/api/account', { headers: authHeaders() });
+    const r = await authFetch(API + '/api/account');
     if (!r.ok) return;
     const d = await r.json();
     credits = d.credits;
@@ -2435,7 +2436,7 @@ async function openAccount(backScreen) {
 async function syncBalance() {
   if (!sessionKey) return;
   try {
-    const r = await fetch(API + '/api/credits/balance', { headers: { 'x-session-key': sessionKey } });
+    const r = await authFetch(API + '/api/credits/balance');
     if (r.ok) {
       const data = await r.json();
       credits = data.credits;
