@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Forge — Build Your AI Company</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #07070f;
+  --card: #0d0d1a;
+  --card2: #111127;
+  --purple: #7c3aed;
+  --purple2: #a78bfa;
+  --cyan: #06b6d4;
+  --green: #10b981;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --dim: #475569;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --r: 12px;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ── SHARED ATOMS ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px; padding: 12px 22px; border-radius: 10px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  border: none; font-family: inherit; transition: all 0.18s;
+  text-decoration: none; letter-spacing: -0.1px;
+}
+.btn-primary {
+  background: linear-gradient(135deg,#7c3aed,#4f46e5);
+  color: #fff; box-shadow: 0 0 28px rgba(124,58,237,.35);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 40px rgba(124,58,237,.5); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+.btn-ghost:hover { background: rgba(255,255,255,.04); color: var(--text); }
+.btn-green { background: linear-gradient(135deg,#059669,#10b981); color: #fff; box-shadow: 0 0 24px rgba(16,185,129,.3); }
+.btn-green:hover { transform: translateY(-1px); }
+.btn-lg { padding: 15px 28px; font-size: 15px; border-radius: 12px; }
+.btn-xl { padding: 18px 36px; font-size: 16px; border-radius: 14px; }
+.btn-full { width: 100%; }
+.input {
+  padding: 13px 16px; background: rgba(255,255,255,.04);
+  border: 1px solid var(--border2); border-radius: 10px;
+  color: var(--text); font-size: 14px; font-family: inherit;
+  outline: none; width: 100%; transition: border-color .2s;
+}
+.input:focus { border-color: rgba(124,58,237,.6); }
+.input::placeholder { color: var(--dim); }
+
+/* logo */
+.logo {
+  font-size: 20px; font-weight: 900; letter-spacing: -0.5px;
+  background: linear-gradient(135deg,#a78bfa,#06b6d4);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; text-decoration: none; user-select: none;
+}
+
+/* credit gem pill */
+.credit-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(124,58,237,.15); border: 1px solid rgba(124,58,237,.35);
+  border-radius: 100px; padding: 6px 14px;
+  font-size: 13px; font-weight: 800; color: var(--purple2);
+  cursor: pointer; transition: all .2s;
+}
+.credit-pill:hover { background: rgba(124,58,237,.25); transform: scale(1.04); }
+.credit-pill .gem { font-size: 16px; }
+
+/* pulse dot */
+.dot-live {
+  width: 7px; height: 7px; background: var(--green);
+  border-radius: 50%; animation: blink 1.6s infinite;
+  display: inline-block;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+/* cards */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); }
+
+/* achievement toast */
+#achievement-toast {
+  position: fixed; top: 24px; right: 24px; z-index: 9999;
+  background: linear-gradient(135deg,var(--card),var(--card2));
+  border: 1px solid rgba(124,58,237,.5);
+  border-radius: 14px; padding: 16px 20px;
+  display: flex; align-items: center; gap: 14px;
+  transform: translateX(140%); transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 8px 40px rgba(124,58,237,.25); min-width: 280px;
+}
+#achievement-toast.show { transform: translateX(0); }
+#achievement-toast .toast-icon { font-size: 32px; }
+#achievement-toast .toast-title { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--purple2); font-weight: 700; margin-bottom: 4px; }
+#achievement-toast .toast-msg { font-size: 14px; font-weight: 700; }
+
+/* credit burst animation */
+@keyframes creditBurst {
+  0% { opacity:1; transform: translateY(0) scale(1); }
+  100% { opacity:0; transform: translateY(-60px) scale(1.4); }
+}
+.credit-burst {
+  position: fixed; font-size: 20px; font-weight: 900;
+  color: var(--purple2); pointer-events: none; z-index: 8888;
+  animation: creditBurst .8s ease forwards;
+}
+
+/* confetti canvas */
+#confetti-canvas {
+  position: fixed; inset: 0; pointer-events: none; z-index: 7777;
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: SPLASH
+═══════════════════════════════════════ */
+#screen-splash {
+  align-items: center; justify-content: center;
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(124,58,237,.25), transparent),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,.1), transparent),
+              var(--bg);
+  padding: 40px 20px;
+}
+.splash-inner { max-width: 560px; width: 100%; text-align: center; }
+.splash-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3);
+  border-radius: 100px; padding: 6px 16px; font-size: 12.5px;
+  color: var(--green); margin-bottom: 28px; font-weight: 600;
+}
+.splash-h1 {
+  font-size: clamp(42px,8vw,72px); font-weight: 900;
+  letter-spacing: -3px; line-height: 1.02; margin-bottom: 20px;
+}
+.grad { background: linear-gradient(135deg,#a78bfa 0%,#06b6d4 55%,#a78bfa 100%); background-size: 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: shimmer 3.5s linear infinite; }
+@keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
+.splash-sub { font-size: 17px; color: var(--muted); margin-bottom: 36px; line-height: 1.65; }
+
+/* FOMO ticker on splash */
+.fomo-ticker {
+  background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.15);
+  border-radius: 10px; padding: 12px 16px; margin-bottom: 32px;
+  text-align: left; overflow: hidden; height: 44px; position: relative;
+}
+.ticker-items { position: absolute; }
+.ticker-item { font-size: 13px; color: var(--muted); padding: 4px 0; white-space: nowrap; }
+.ticker-item strong { color: var(--text); }
+.ticker-item .amount { color: var(--green); font-weight: 700; }
+.splash-note { font-size: 12px; color: var(--dim); margin-top: 14px; }
+.splash-note a { color: var(--purple2); text-decoration: none; }
+
+/* live leaderboard on splash */
+.splash-lb {
+  margin-top: 36px; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; text-align: left;
+}
+.splash-lb-head {
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--dim); font-weight: 700; display: flex; justify-content: space-between;
+}
+.splash-lb-row {
+  padding: 13px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px; font-size: 13.5px;
+}
+.splash-lb-row:last-child { border-bottom: none; }
+.lb-rank { font-size: 18px; font-weight: 900; width: 24px; flex-shrink: 0; }
+.rank-gold { color: #fbbf24; }
+.rank-silver { color: #94a3b8; }
+.rank-bronze { color: #d97706; }
+.lb-name { flex: 1; font-weight: 600; }
+.lb-meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.lb-rev { font-size: 16px; font-weight: 900; color: var(--green); }
+
+/* ═══════════════════════════════════════
+   SCREEN: HOME (logged in)
+═══════════════════════════════════════ */
+#screen-home {
+  flex-direction: column;
+}
+.home-nav {
+  padding: 0 32px; height: 60px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(7,7,15,.9); backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 50;
+}
+.home-body { flex: 1; padding: 32px; max-width: 960px; margin: 0 auto; width: 100%; }
+
+/* greeting */
+.home-greeting h1 { font-size: 26px; font-weight: 900; letter-spacing: -1px; margin-bottom: 4px; }
+.home-greeting p { font-size: 14px; color: var(--muted); }
+
+/* streak + level row */
+.home-stats-row {
+  display: flex; gap: 12px; margin: 24px 0; flex-wrap: wrap;
+}
+.home-stat-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 100px; padding: 8px 16px; font-size: 13px; font-weight: 700;
+}
+.home-stat-pill .pill-icon { font-size: 16px; }
+.home-stat-pill .pill-label { color: var(--muted); font-weight: 400; font-size: 12px; }
+
+/* big create CTA */
+.create-cta-block {
+  background: linear-gradient(135deg, rgba(124,58,237,.12), rgba(6,182,212,.07));
+  border: 1px solid rgba(124,58,237,.3);
+  border-radius: 20px; padding: 36px; margin-bottom: 24px;
+  position: relative; overflow: hidden;
+}
+.create-cta-block::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(6,182,212,.08), transparent);
+}
+.create-cta-block h2 { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px; position: relative; }
+.create-cta-block p { font-size: 14px; color: var(--muted); margin-bottom: 20px; position: relative; }
+.create-cta-row { display: flex; gap: 12px; position: relative; }
+.quick-input {
+  flex: 1; padding: 13px 18px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--border2);
+  border-radius: 10px; color: var(--text); font-size: 14px;
+  font-family: inherit; outline: none; transition: border-color .2s;
+}
+.quick-input:focus { border-color: rgba(124,58,237,.6); }
+.quick-input::placeholder { color: var(--dim); }
+
+/* daily challenge */
+.daily-challenge {
+  background: linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.03));
+  border: 1px solid rgba(245,158,11,.25); border-radius: var(--r);
+  padding: 20px 24px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px;
+}
+.dc-icon { font-size: 32px; flex-shrink: 0; }
+.dc-content { flex: 1; }
+.dc-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--amber); font-weight: 700; margin-bottom: 4px; }
+.dc-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.dc-bar { height: 6px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
+.dc-bar-fill { height: 100%; background: linear-gradient(90deg,var(--amber),#f97316); border-radius: 3px; transition: width .5s; }
+.dc-meta { font-size: 12px; color: var(--dim); margin-top: 6px; }
+
+/* 2-col layout */
+.home-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+
+/* achievements */
+.achiev-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 16px; }
+.achiev-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 8px; border-radius: 10px; background: rgba(255,255,255,.02);
+  border: 1px solid var(--border); text-align: center; position: relative;
+}
+.achiev-item.unlocked { border-color: rgba(124,58,237,.4); background: rgba(124,58,237,.07); }
+.achiev-icon { font-size: 26px; }
+.achiev-name { font-size: 11px; font-weight: 700; color: var(--muted); }
+.achiev-item.unlocked .achiev-name { color: var(--purple2); }
+.achiev-locked { filter: grayscale(1); opacity: .35; }
+.achiev-check {
+  position: absolute; top: 5px; right: 5px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--green); font-size: 8px; display: none;
+  align-items: center; justify-content: center; color: white; font-weight: 900;
+}
+.achiev-item.unlocked .achiev-check { display: flex; }
+
+/* FOMO live feed */
+.fomo-feed { display: flex; flex-direction: column; gap: 0; }
+.fomo-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  font-size: 13px; animation: slideIn .4s ease;
+}
+@keyframes slideIn { from{opacity:0;transform:translateY(-8px);} to{opacity:1;transform:none;} }
+.fomo-item:last-child { border-bottom: none; }
+.fomo-emoji { font-size: 15px; flex-shrink: 0; }
+.fomo-text { flex: 1; color: var(--muted); }
+.fomo-text strong { color: var(--text); }
+.fomo-time { font-size: 11px; color: var(--dim); flex-shrink: 0; }
+.fomo-amount { font-size: 13px; font-weight: 800; color: var(--green); flex-shrink: 0; }
+
+/* ═══════════════════════════════════════
+   SCREEN: CREATE (wizard)
+═══════════════════════════════════════ */
+#screen-create {
+  align-items: center; justify-content: flex-start; padding: 32px 20px 60px;
+  background: radial-gradient(ellipse 70% 40% at 50% 5%, rgba(124,58,237,.18), transparent), var(--bg);
+}
+.create-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  padding: 0 32px; height: 56px; border-bottom: 1px solid var(--border);
+  background: rgba(7,7,15,.9); backdrop-filter: blur(16px);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.create-body { margin-top: 72px; width: 100%; max-width: 580px; }
+
+/* progress steps */
+.wizard-steps-bar {
+  display: flex; align-items: center; gap: 0; margin-bottom: 32px;
+}
+.ws-step {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative;
+}
+.ws-step::after {
+  content: ''; position: absolute; top: 14px; left: 55%; right: -45%;
+  height: 2px; background: var(--border2); z-index: 0;
+}
+.ws-step:last-child::after { display: none; }
+.ws-circle {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; border: 2px solid var(--border2);
+  background: var(--card); color: var(--dim); position: relative; z-index: 1; transition: all .3s;
+}
+.ws-step.done .ws-circle { background: var(--green); border-color: var(--green); color: white; }
+.ws-step.done::after { background: var(--green); }
+.ws-step.active .ws-circle {
+  background: linear-gradient(135deg,var(--purple),#4f46e5);
+  border-color: transparent; color: white;
+  box-shadow: 0 0 16px rgba(124,58,237,.5);
+}
+.ws-label { font-size: 11px; color: var(--dim); font-weight: 600; }
+.ws-step.active .ws-label { color: var(--purple2); }
+.ws-step.done .ws-label { color: var(--green); }
+
+/* wizard panel */
+.wizard-panel {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 20px; overflow: hidden; display: none;
+}
+.wizard-panel.active { display: block; }
+.wp-header { padding: 28px 32px 20px; border-bottom: 1px solid var(--border); }
+.wp-step-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--purple2); font-weight: 700; margin-bottom: 6px; }
+.wp-title { font-size: 22px; font-weight: 900; letter-spacing: -.5px; margin-bottom: 6px; }
+.wp-sub { font-size: 14px; color: var(--muted); }
+.wp-body { padding: 24px 32px; }
+.wp-footer {
+  padding: 16px 32px; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+/* SLOT MACHINE */
+.slot-machine {
+  background: rgba(0,0,0,.3); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 0; overflow: hidden; margin-bottom: 16px;
+  height: 72px; position: relative;
+}
+.slot-display {
+  height: 72px; display: flex; align-items: center;
+  padding: 0 20px; font-size: 15px; font-weight: 600; color: var(--text);
+  line-height: 1.5; gap: 12px;
+}
+.slot-cursor { color: var(--purple2); animation: blink-cursor 1s infinite; }
+@keyframes blink-cursor { 0%,100%{opacity:1;} 50%{opacity:0;} }
+.slot-spinning { color: var(--dim); font-style: italic; }
+
+.surprise-btn {
+  width: 100%; padding: 14px; font-size: 14px; font-weight: 800;
+  background: linear-gradient(135deg,rgba(124,58,237,.15),rgba(6,182,212,.1));
+  border: 1px solid rgba(124,58,237,.35); border-radius: 10px;
+  color: var(--purple2); cursor: pointer; font-family: inherit;
+  transition: all .2s; letter-spacing: -.1px;
+}
+.surprise-btn:hover {
+  background: linear-gradient(135deg,rgba(124,58,237,.25),rgba(6,182,212,.18));
+  transform: translateY(-1px); box-shadow: 0 0 24px rgba(124,58,237,.2);
+}
+
+.idea-divider { text-align: center; font-size: 12px; color: var(--dim); margin: 14px 0; }
+
+.idea-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.idea-chip {
+  padding: 6px 14px; border-radius: 100px; font-size: 12px; font-weight: 600;
+  background: rgba(255,255,255,.04); border: 1px solid var(--border2);
+  color: var(--muted); cursor: pointer; transition: all .15s;
+}
+.idea-chip:hover { border-color: rgba(124,58,237,.4); color: var(--purple2); background: rgba(124,58,237,.08); }
+
+/* credit cost tag */
+.cost-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.25);
+  border-radius: 100px; padding: 4px 12px; font-size: 12px; font-weight: 700;
+  color: var(--purple2);
+}
+
+/* step 2: name/category */
+.cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.cat-opt {
+  padding: 16px 12px; border-radius: 10px; background: rgba(255,255,255,.02);
+  border: 1px solid var(--border2); cursor: pointer; text-align: center;
+  transition: all .18s;
+}
+.cat-opt:hover { border-color: rgba(124,58,237,.4); background: rgba(124,58,237,.07); }
+.cat-opt.selected { border-color: rgba(124,58,237,.7); background: rgba(124,58,237,.13); }
+.cat-opt .icon { font-size: 24px; margin-bottom: 6px; }
+.cat-opt .label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.cat-opt.selected .label { color: var(--purple2); }
+
+/* step 3: plan */
+.plan-opt {
+  padding: 20px; border-radius: var(--r); background: rgba(255,255,255,.02);
+  border: 1px solid var(--border); cursor: pointer; display: flex;
+  align-items: center; gap: 16px; margin-bottom: 12px; transition: all .18s;
+}
+.plan-opt:hover, .plan-opt.selected { border-color: rgba(124,58,237,.5); background: rgba(124,58,237,.07); }
+.plan-radio {
+  width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border2);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all .2s;
+}
+.plan-opt.selected .plan-radio {
+  border-color: var(--purple); background: var(--purple);
+}
+.plan-opt.selected .plan-radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: white; }
+.plan-name { font-size: 15px; font-weight: 800; }
+.plan-desc { font-size: 12px; color: var(--dim); margin-top: 3px; }
+.plan-price { margin-left: auto; font-size: 20px; font-weight: 900; color: var(--purple2); }
+.plan-badge {
+  font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 100px;
+  background: linear-gradient(135deg,var(--purple),#4f46e5); color: white; margin-left: 8px;
+}
+
+/* ═══════════════════════════════════════
+   SCREEN: BUILD (cinematic)
+═══════════════════════════════════════ */
+#screen-build {
+  align-items: center; justify-content: center; padding: 40px 20px;
+  background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(124,58,237,.2), transparent), var(--bg);
+}
+.build-card {
+  background: var(--card); border: 1px solid var(--border2); border-radius: 20px;
+  width: 560px; max-width: 100%; overflow: hidden;
+}
+.build-top {
+  padding: 32px 32px 24px; border-bottom: 1px solid var(--border); text-align: center;
+}
+.build-spinner-wrap { position: relative; width: 80px; height: 80px; margin: 0 auto 20px; }
+.build-ring {
+  width: 80px; height: 80px; border-radius: 50%;
+  border: 3px solid rgba(124,58,237,.15);
+  border-top-color: var(--purple); animation: spin 1s linear infinite;
+  position: absolute; inset: 0;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.build-ring2 {
+  width: 60px; height: 60px; border-radius: 50%;
+  border: 2px solid rgba(6,182,212,.15);
+  border-bottom-color: var(--cyan); animation: spin 1.4s linear infinite reverse;
+  position: absolute; top: 10px; left: 10px;
+}
+.build-emoji { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 24px; }
+.build-title { font-size: 20px; font-weight: 900; letter-spacing: -.5px; margin-bottom: 6px; }
+.build-sub { font-size: 13px; color: var(--muted); }
+
+/* agent roster */
+.agent-roster {
+  padding: 20px 24px; display: flex; flex-direction: column; gap: 10px;
+}
+.agent-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  background: rgba(255,255,255,.02); border: 1px solid var(--border);
+  border-radius: 10px; transition: all .4s;
+}
+.agent-row.active {
+  border-color: rgba(124,58,237,.4); background: rgba(124,58,237,.07);
+}
+.agent-row.done { border-color: rgba(16,185,129,.3); background: rgba(16,185,129,.05); }
+.agent-row .ag-icon { font-size: 20px; flex-shrink: 0; }
+.agent-row .ag-name { font-size: 13.5px; font-weight: 700; flex: 1; }
+.agent-row .ag-task { font-size: 11px; color: var(--dim); margin-top: 2px; }
+.agent-row .ag-status {
+  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 100px;
+  background: rgba(255,255,255,.05); color: var(--dim);
+}
+.agent-row.active .ag-status { background: rgba(124,58,237,.15); color: var(--purple2); }
+.agent-row.done .ag-status { background: rgba(16,185,129,.12); color: var(--green); }
+
+/* progress bar */
+.build-progress-wrap { padding: 0 24px 20px; }
+.build-progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-bottom: 8px; }
+.build-bar { height: 6px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
+.build-bar-fill { height: 100%; background: linear-gradient(90deg,var(--purple),var(--cyan)); border-radius: 3px; width: 0%; transition: width .8s ease; }
+
+/* log terminal */
+.build-log {
+  margin: 0 24px 20px; background: rgba(0,0,0,.4);
+  border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+  font-family: 'SF Mono', 'Fira Mono', monospace; font-size: 11.5px;
+  line-height: 1.8; color: var(--muted); max-height: 130px; overflow-y: auto;
+}
+.log-ok { color: var(--green); }
+.log-info { color: var(--cyan); }
+.log-act { color: var(--purple2); }
+
+/* ═══════════════════════════════════════
+   SCREEN: SUCCESS (celebration)
+═══════════════════════════════════════ */
+#screen-success {
+  align-items: center; justify-content: center; padding: 40px 20px;
+  background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(16,185,129,.15), transparent), var(--bg);
+}
+.success-card {
+  background: var(--card); border: 1px solid rgba(16,185,129,.3);
+  border-radius: 24px; width: 520px; max-width: 100%; padding: 48px 40px;
+  text-align: center;
+}
+.success-emoji { font-size: 64px; margin-bottom: 20px; display: block; animation: popIn .6s cubic-bezier(.34,1.56,.64,1); }
+@keyframes popIn { 0%{transform:scale(0);} 100%{transform:scale(1);} }
+.success-h1 { font-size: 32px; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px; }
+.success-sub { font-size: 15px; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+.success-url {
+  background: rgba(255,255,255,.04); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 700;
+  color: var(--cyan); margin-bottom: 24px; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px;
+}
+.success-url span { color: var(--dim); font-size: 12px; cursor: pointer; }
+.success-achievements {
+  display: flex; gap: 10px; justify-content: center; margin-bottom: 28px;
+}
+.sa-item {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 12px 16px; border-radius: 10px;
+  background: linear-gradient(135deg,rgba(124,58,237,.12),rgba(124,58,237,.06));
+  border: 1px solid rgba(124,58,237,.3);
+}
+.sa-icon { font-size: 24px; }
+.sa-label { font-size: 10px; font-weight: 700; color: var(--purple2); text-transform: uppercase; letter-spacing: .05em; }
+
+/* ═══════════════════════════════════════
+   SCREEN: DASHBOARD
+═══════════════════════════════════════ */
+#screen-dashboard { flex-direction: row; }
+.sidebar {
+  width: 220px; min-height: 100vh; background: rgba(10,10,24,.8);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0;
+}
+.sb-logo { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.sb-company {
+  margin: 12px; background: rgba(255,255,255,.03); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 12px;
+}
+.sb-company-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin-bottom: 4px; font-weight: 700; }
+.sb-company-name { font-size: 14px; font-weight: 800; display: flex; justify-content: space-between; }
+.sb-company-status { font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 5px; margin-top: 4px; }
+
+/* credit bar in sidebar */
+.sb-credits {
+  margin: 0 12px 8px; background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.2);
+  border-radius: 10px; padding: 12px;
+}
+.sb-credit-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.sb-credit-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+.sb-credit-val { font-size: 16px; font-weight: 900; color: var(--purple2); }
+.sb-credit-bar { height: 4px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
+.sb-credit-fill { height: 100%; background: linear-gradient(90deg,var(--purple),var(--cyan)); border-radius: 2px; width: 33%; }
+
+.sb-section { padding: 12px 12px 4px; }
+.sb-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); padding: 0 8px; margin-bottom: 4px; font-weight: 700; }
+.sb-item {
+  display: flex; align-items: center; gap: 9px; padding: 9px 12px;
+  border-radius: 8px; font-size: 13px; color: var(--muted);
+  cursor: pointer; transition: all .15s; margin-bottom: 2px;
+}
+.sb-item:hover { background: rgba(255,255,255,.04); color: var(--text); }
+.sb-item.active { background: rgba(124,58,237,.12); color: var(--purple2); }
+.sb-badge { margin-left: auto; background: rgba(16,185,129,.15); color: var(--green); font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 100px; }
+.sb-badge.purple { background: rgba(124,58,237,.15); color: var(--purple2); }
+.sb-footer { margin-top: auto; padding: 14px 12px; border-top: 1px solid var(--border); }
+.sb-user { display: flex; align-items: center; gap: 9px; }
+.sb-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg,var(--purple),var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 900; color: white;
+}
+.sb-uname { font-size: 13px; font-weight: 700; }
+.sb-uplan { font-size: 11px; color: var(--dim); }
+
+/* main */
+.main {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+}
+.topbar {
+  padding: 0 28px; height: 56px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(7,7,15,.9); backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 10;
+}
+.topbar-title { font-size: 15px; font-weight: 800; }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 28px; }
+.tab {
+  padding: 13px 18px; font-size: 13.5px; color: var(--dim); cursor: pointer;
+  border: none; background: transparent; font-family: inherit; font-weight: 500;
+  border-bottom: 2px solid transparent; transition: all .15s; white-space: nowrap;
+}
+.tab:hover { color: var(--muted); }
+.tab.active { color: var(--text); border-bottom-color: var(--purple); }
+.tab-content { display: none; padding: 24px 28px; flex: 1; }
+.tab-content.active { display: block; }
+
+/* kpi */
+.kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+.kpi {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 18px 20px;
+}
+.kpi-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .07em; font-weight: 700; margin-bottom: 10px; }
+.kpi-val { font-size: 26px; font-weight: 900; letter-spacing: -1px; margin-bottom: 5px; }
+.kpi-delta { font-size: 12px; }
+.up { color: var(--green); } .dn { color: var(--red); }
+
+/* two-col */
+.dash-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
+.card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.card-title { font-size: 13.5px; font-weight: 800; }
+.card-action { font-size: 12px; color: var(--purple2); cursor: pointer; }
+.card-body { padding: 14px 18px; }
+
+/* agent status list */
+.ag-status-list { display: flex; flex-direction: column; gap: 10px; }
+.ag-status-item { display: flex; align-items: center; gap: 10px; }
+.ag-status-icon { font-size: 18px; }
+.ag-status-name { font-size: 13px; font-weight: 700; flex: 1; }
+.ag-status-task { font-size: 11px; color: var(--dim); }
+.badge {
+  font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 100px;
+}
+.badge-run { background: rgba(16,185,129,.12); color: var(--green); }
+.badge-idle { background: rgba(71,85,105,.12); color: var(--dim); }
+.badge-q { background: rgba(245,158,11,.1); color: var(--amber); }
+
+/* activity feed */
+.act-list { display: flex; flex-direction: column; }
+.act-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.act-item:last-child { border-bottom: none; }
+.act-dot { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.act-body { flex: 1; }
+.act-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.act-meta { font-size: 11px; color: var(--dim); }
+.act-val { font-size: 13px; font-weight: 800; color: var(--green); white-space: nowrap; }
+
+/* live feed dashboard */
+.live-feed-block { margin-top: 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.live-feed-head { padding: 10px 16px; background: rgba(16,185,129,.05); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--green); }
+.live-feed-items { padding: 4px 0; }
+.live-feed-item { display: flex; align-items: center; gap: 9px; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 12.5px; animation: slideIn .4s ease; }
+.live-feed-item:last-child { border-bottom: none; }
+.lf-emoji { font-size: 14px; flex-shrink: 0; }
+.lf-time { font-size: 11px; color: var(--dim); flex-shrink: 0; }
+.lf-text { flex: 1; color: var(--muted); }
+.lf-text strong { color: var(--text); }
+.lf-amount { font-size: 12px; font-weight: 800; color: var(--green); }
+
+/* CEO chat */
+.chat-layout { display: flex; flex-direction: column; height: calc(100vh - 220px); }
+.chat-msgs { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding: 4px 0 12px; }
+.chat-msg { display: flex; gap: 12px; }
+.chat-msg.user { flex-direction: row-reverse; }
+.chat-av { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; }
+.av-ceo { background: linear-gradient(135deg,var(--purple),var(--cyan)); color: white; }
+.av-me { background: rgba(255,255,255,.08); color: var(--muted); }
+.chat-bubble { max-width: 74%; padding: 13px 16px; border-radius: 14px; font-size: 13.5px; line-height: 1.65; }
+.chat-msg.ceo .chat-bubble { background: var(--card); border: 1px solid var(--border2); border-radius: 14px 14px 14px 4px; }
+.chat-msg.user .chat-bubble { background: linear-gradient(135deg,var(--purple),#4f46e5); color: white; border-radius: 14px 14px 4px 14px; }
+.chat-meta { font-size: 11px; color: var(--dim); margin-top: 5px; }
+.chat-msg.user .chat-meta { text-align: right; }
+.chat-bar { border-top: 1px solid var(--border); padding: 14px 0 0; display: flex; gap: 10px; }
+.chat-textarea { flex: 1; padding: 13px 16px; background: var(--card); border: 1px solid var(--border2); border-radius: 10px; color: var(--text); font-size: 13.5px; font-family: inherit; outline: none; resize: none; min-height: 48px; transition: border-color .2s; }
+.chat-textarea:focus { border-color: rgba(124,58,237,.6); }
+.chat-textarea::placeholder { color: var(--dim); }
+.send-btn { width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg,var(--purple),#4f46e5); border: none; color: white; font-size: 18px; cursor: pointer; transition: all .2s; }
+.send-btn:hover { transform: scale(1.08); box-shadow: 0 0 20px rgba(124,58,237,.45); }
+
+/* daily report card */
+.report-card { background: rgba(16,185,129,.05); border: 1px solid rgba(16,185,129,.2); border-radius: 10px; padding: 14px 16px; margin-top: 10px; }
+.report-title { font-size: 12px; font-weight: 800; color: var(--green); margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+.report-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.report-row:last-child { border-bottom: none; }
+.report-key { color: var(--muted); }
+.report-val { font-weight: 800; }
+.rv-green { color: var(--green); }
+
+/* agents tab */
+.agents-grid-dash { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+.agent-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; transition: border-color .2s; }
+.agent-card:hover { border-color: rgba(124,58,237,.3); }
+.ac-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ac-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.ac-name { font-size: 14px; font-weight: 800; }
+.ac-role { font-size: 11px; color: var(--dim); }
+.ac-tasks { display: flex; flex-direction: column; gap: 7px; }
+.ac-task-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.ac-footer { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.ac-stat { font-size: 12px; color: var(--dim); }
+.ac-stat strong { color: var(--text); }
+
+/* chart placeholder */
+.bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding: 0 8px; }
+.bar-grp { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.bar { width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg,var(--purple),rgba(124,58,237,.4)); min-height: 4px; transition: opacity .2s; }
+.bar:hover { opacity: .7; }
+.bar-lbl { font-size: 10px; color: var(--dim); }
+
+/* add company card */
+.add-company-cta {
+  background: linear-gradient(135deg,rgba(124,58,237,.08),rgba(6,182,212,.05));
+  border: 1px dashed rgba(124,58,237,.3); border-radius: var(--r);
+  padding: 20px; display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 10px; cursor: pointer; transition: all .2s;
+  justify-content: center; min-height: 120px;
+}
+.add-company-cta:hover { border-color: rgba(124,58,237,.6); background: rgba(124,58,237,.1); transform: translateY(-1px); }
+.add-company-cta h4 { font-size: 14px; font-weight: 800; }
+.add-company-cta p { font-size: 12px; color: var(--dim); }
+
+@media(max-width:768px) {
+  .kpi-row { grid-template-columns: repeat(2,1fr); }
+  .dash-grid { grid-template-columns: 1fr; }
+  .home-grid { grid-template-columns: 1fr; }
+  .agents-grid-dash { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ACHIEVEMENT TOAST -->
+<div id="achievement-toast">
+  <div class="toast-icon" id="toast-icon">🏆</div>
+  <div>
+    <div class="toast-title">Achievement unlocked</div>
+    <div class="toast-msg" id="toast-msg">First Company!</div>
+  </div>
+</div>
+
+<!-- CONFETTI CANVAS -->
+<canvas id="confetti-canvas"></canvas>
+
+<!-- ═══════════ SPLASH ═══════════ -->
+<div id="screen-splash" class="screen active">
+  <div class="splash-inner">
+    <div class="splash-badge">
+      <span class="dot-live"></span>
+      8,412 AI companies founded · 247 live right now
+    </div>
+    <h1 class="splash-h1">
+      Build your<br>
+      <span class="grad">AI company</span><br>
+      in one sentence.
+    </h1>
+    <p class="splash-sub">Forge builds the product, ships the website, runs the ads and emails customers — fully autonomous. You're the owner. You just talk to your CEO.</p>
+
+    <!-- FOMO TICKER -->
+    <div class="fomo-ticker">
+      <div class="ticker-items" id="ticker">
+        <div class="ticker-item">💰 <strong>████ AI</strong> just received <span class="amount">$149</span> — 3 seconds ago</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-xl btn-full" onclick="goHome()" style="margin-bottom:12px; font-size:16px;">
+      ⬡ Start forging →
+    </button>
+    <p class="splash-note">Free to start · 3 credits included · <a onclick="goHome()">Already a member? Sign in</a></p>
+
+    <!-- MINI LEADERBOARD -->
+    <div class="splash-lb">
+      <div class="splash-lb-head">
+        <span>Top earners this week</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span class="dot-live"></span> Live</span>
+      </div>
+      <div class="splash-lb-row">
+        <span class="lb-rank rank-gold">01</span>
+        <div>
+          <div class="lb-name">████████ AI</div>
+          <div class="lb-meta">SaaS · 333 sales · 18 days old</div>
+        </div>
+        <div class="lb-rev">$1,686</div>
+      </div>
+      <div class="splash-lb-row">
+        <span class="lb-rank rank-silver">02</span>
+        <div>
+          <div class="lb-name">████ Corp</div>
+          <div class="lb-meta">Service · 91 sales · 12 days old</div>
+        </div>
+        <div class="lb-rev">$1,146</div>
+      </div>
+      <div class="splash-lb-row">
+        <span class="lb-rank rank-bronze">03</span>
+        <div>
+          <div class="lb-name">████ Labs</div>
+          <div class="lb-meta">B2B tool · 47 sales · 9 days old</div>
+        </div>
+        <div class="lb-rev">$427</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ HOME ═══════════ -->
+<div id="screen-home" class="screen">
+  <div class="home-nav">
+    <span class="logo">⬡ FORGE</span>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div class="credit-pill" onclick="spendCredit()" title="Click to use a credit">
+        <span class="gem">💎</span>
+        <span id="home-credits">2</span> credits
+      </div>
+      <div class="sb-avatar" style="width:34px;height:34px;font-size:13px;cursor:pointer;">T</div>
+    </div>
+  </div>
+  <div class="home-body">
+    <div class="home-greeting">
+      <h1>Good morning, Thomas. 👋</h1>
+      <p>Your company earned <strong style="color:var(--green)">$148</strong> while you slept. Here's what's happening.</p>
+    </div>
+
+    <!-- STREAK + STATS -->
+    <div class="home-stats-row">
+      <div class="home-stat-pill"><span class="pill-icon">🔥</span> <strong>3</strong> <span class="pill-label">day streak</span></div>
+      <div class="home-stat-pill"><span class="pill-icon">⚡</span> <strong>Level 1</strong> <span class="pill-label">Founder</span></div>
+      <div class="home-stat-pill"><span class="pill-icon">💰</span> <strong>$487</strong> <span class="pill-label">total revenue</span></div>
+      <div class="home-stat-pill"><span class="pill-icon">🏆</span> <strong>2/8</strong> <span class="pill-label">achievements</span></div>
+    </div>
+
+    <!-- DAILY CHALLENGE -->
+    <div class="daily-challenge">
+      <div class="dc-icon">🎯</div>
+      <div class="dc-content">
+        <div class="dc-label">Daily challenge</div>
+        <div class="dc-title">Launch your second AI company today</div>
+        <div class="dc-bar"><div class="dc-bar-fill" style="width:0%"></div></div>
+        <div class="dc-meta">Reward: +2 bonus credits 💎💎 · Expires in 14h 32m</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="goCreate()">Start →</button>
+    </div>
+
+    <!-- CREATE CTA -->
+    <div class="create-cta-block">
+      <h2>⚡ Forge a new AI company</h2>
+      <p>Describe your idea below — or let us surprise you. Your company will be live in minutes.</p>
+      <div class="create-cta-row">
+        <input class="quick-input" id="home-idea-input" type="text" placeholder="An AI that writes cold emails for freelancers…" />
+        <button class="btn btn-primary" onclick="goCreateWithIdea()">Forge it →</button>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+        <button class="surprise-btn" style="width:auto;padding:8px 18px;font-size:13px;" onclick="goCreateSurprise()">🎲 Surprise me</button>
+        <span style="font-size:12px;color:var(--dim);">Uses <span class="cost-tag">💎 1 credit</span></span>
+      </div>
+    </div>
+
+    <div class="home-grid">
+      <!-- ACHIEVEMENTS -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🏆 Achievements</span>
+          <span class="card-action">View all</span>
+        </div>
+        <div class="achiev-grid">
+          <div class="achiev-item unlocked">
+            <div class="achiev-check">✓</div>
+            <div class="achiev-icon">🚀</div>
+            <div class="achiev-name">First launch</div>
+          </div>
+          <div class="achiev-item unlocked">
+            <div class="achiev-check">✓</div>
+            <div class="achiev-icon">💰</div>
+            <div class="achiev-name">First $1</div>
+          </div>
+          <div class="achiev-item achiev-locked">
+            <div class="achiev-icon">🏭</div>
+            <div class="achiev-name">2 companies</div>
+          </div>
+          <div class="achiev-item achiev-locked">
+            <div class="achiev-icon">💎</div>
+            <div class="achiev-name">$100 revenue</div>
+          </div>
+          <div class="achiev-item achiev-locked">
+            <div class="achiev-icon">🔥</div>
+            <div class="achiev-name">7-day streak</div>
+          </div>
+          <div class="achiev-item achiev-locked">
+            <div class="achiev-icon">👑</div>
+            <div class="achiev-name">Top earner</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE FOMO FEED -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" style="display:flex;align-items:center;gap:8px;"><span class="dot-live"></span> Live floor</span>
+          <span style="font-size:12px;color:var(--dim);">247 companies active</span>
+        </div>
+        <div class="fomo-feed" id="home-fomo-feed">
+          <div class="fomo-item"><span class="fomo-emoji">💰</span><div class="fomo-text"><strong>████ AI</strong> closed a sale</div><span class="fomo-time">2s</span><span class="fomo-amount">+$97</span></div>
+          <div class="fomo-item"><span class="fomo-emoji">📧</span><div class="fomo-text"><strong>████ Labs</strong> sent 40 emails</div><span class="fomo-time">14s</span></div>
+          <div class="fomo-item"><span class="fomo-emoji">🚀</span><div class="fomo-text"><strong>████████</strong> went live</div><span class="fomo-time">1m</span></div>
+          <div class="fomo-item"><span class="fomo-emoji">💰</span><div class="fomo-text"><strong>████ Corp</strong> received payment</div><span class="fomo-time">2m</span><span class="fomo-amount">+$149</span></div>
+          <div class="fomo-item"><span class="fomo-emoji">📣</span><div class="fomo-text"><strong>████ Studio</strong> launched Meta ad</div><span class="fomo-time">3m</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CREATE ═══════════ -->
+<div id="screen-create" class="screen">
+  <div class="create-nav">
+    <span class="logo">⬡ FORGE</span>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div class="credit-pill"><span class="gem">💎</span> <span id="create-credits">2</span> credits</div>
+      <button class="btn btn-ghost btn-sm" onclick="goHome()">✕ Cancel</button>
+    </div>
+  </div>
+
+  <div class="create-body">
+    <!-- STEP INDICATORS -->
+    <div class="wizard-steps-bar" id="steps-bar">
+      <div class="ws-step active" id="ws1"><div class="ws-circle">1</div><div class="ws-label">Idea</div></div>
+      <div class="ws-step" id="ws2"><div class="ws-circle">2</div><div class="ws-label">Details</div></div>
+      <div class="ws-step" id="ws3"><div class="ws-circle">3</div><div class="ws-label">Plan</div></div>
+    </div>
+
+    <!-- STEP 1: IDEA -->
+    <div class="wizard-panel active" id="wp1">
+      <div class="wp-header">
+        <div class="wp-step-label">Step 1 of 3 · 💎 1 credit</div>
+        <div class="wp-title">What company do you want?</div>
+        <div class="wp-sub">Describe it in one sentence — or spin the wheel.</div>
+      </div>
+      <div class="wp-body">
+        <!-- SLOT MACHINE -->
+        <div class="slot-machine">
+          <div class="slot-display" id="slot-display">
+            <span id="slot-text">An AI that helps freelancers automate invoicing and chase overdue payments automatically.</span>
+            <span class="slot-cursor">|</span>
+          </div>
+        </div>
+        <button class="surprise-btn" onclick="spinSlot()">🎲 Surprise me — spin a random idea</button>
+        <div class="idea-divider">— or type your own below —</div>
+        <textarea class="input" id="idea-textarea" rows="3" placeholder="An AI that…" style="resize:none;line-height:1.6;">An AI that helps freelancers automate invoicing and chase overdue payments automatically.</textarea>
+        <div class="idea-chips">
+          <div class="idea-chip" onclick="pickChip(this)">Contract auditor</div>
+          <div class="idea-chip" onclick="pickChip(this)">SEO content bot</div>
+          <div class="idea-chip" onclick="pickChip(this)">Investor updates</div>
+          <div class="idea-chip" onclick="pickChip(this)">Pricing monitor</div>
+          <div class="idea-chip" onclick="pickChip(this)">HR assistant</div>
+          <div class="idea-chip" onclick="pickChip(this)">Social media AI</div>
+        </div>
+      </div>
+      <div class="wp-footer">
+        <button class="btn btn-ghost btn-sm" onclick="goHome()">← Back</button>
+        <button class="btn btn-primary" onclick="nextWizard(2)">Next: Name it →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: DETAILS -->
+    <div class="wizard-panel" id="wp2">
+      <div class="wp-header">
+        <div class="wp-step-label">Step 2 of 3</div>
+        <div class="wp-title">Name your company</div>
+        <div class="wp-sub">Give it a name and pick a category.</div>
+      </div>
+      <div class="wp-body">
+        <div style="margin-bottom:20px;">
+          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:8px;">Company name</label>
+          <input class="input" id="company-name-input" type="text" value="PayFlow AI" placeholder="Your company name…" />
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:10px;">Category</label>
+          <div class="cat-grid">
+            <div class="cat-opt selected" onclick="selCat(this)"><div class="icon">💼</div><div class="label">B2B SaaS</div></div>
+            <div class="cat-opt" onclick="selCat(this)"><div class="icon">🛒</div><div class="label">E-commerce</div></div>
+            <div class="cat-opt" onclick="selCat(this)"><div class="icon">🎓</div><div class="label">Education</div></div>
+            <div class="cat-opt" onclick="selCat(this)"><div class="icon">📊</div><div class="label">Analytics</div></div>
+            <div class="cat-opt" onclick="selCat(this)"><div class="icon">⚡</div><div class="label">Productivity</div></div>
+            <div class="cat-opt" onclick="selCat(this)"><div class="icon">🌍</div><div class="label">Global</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="wp-footer">
+        <button class="btn btn-ghost btn-sm" onclick="nextWizard(1)">← Back</button>
+        <button class="btn btn-primary" onclick="nextWizard(3)">Next: Choose plan →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: PLAN -->
+    <div class="wizard-panel" id="wp3">
+      <div class="wp-header">
+        <div class="wp-step-label">Step 3 of 3 · Last step!</div>
+        <div class="wp-title">Pick your plan</div>
+        <div class="wp-sub">Start free. Upgrade when you're earning.</div>
+      </div>
+      <div class="wp-body">
+        <div class="plan-opt selected" id="plan-free" onclick="selPlan('free')">
+          <div class="plan-radio"></div>
+          <div>
+            <div class="plan-name">Free <span style="font-size:11px;color:var(--dim);font-weight:400;">· uses 1 credit</span></div>
+            <div class="plan-desc">forge.app domain · 1 active company · 20% on withdrawals</div>
+          </div>
+          <div class="plan-price">$0</div>
+        </div>
+        <div class="plan-opt" id="plan-founder" onclick="selPlan('founder')">
+          <div class="plan-radio"></div>
+          <div>
+            <div class="plan-name">Founder <span class="plan-badge">POPULAR</span></div>
+            <div class="plan-desc">30 credits/month · Unlimited companies · Custom domain</div>
+          </div>
+          <div class="plan-price">$30<span style="font-size:12px;color:var(--dim);font-weight:400;">/mo</span></div>
+        </div>
+        <div style="background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px;margin-top:4px;">
+          <p style="font-size:13px;color:var(--muted);line-height:1.6;">💡 <strong style="color:var(--text)">Earn more credits:</strong> refer a friend and get +2 credits per signup. Complete daily challenges for bonus credits.</p>
+        </div>
+      </div>
+      <div class="wp-footer">
+        <button class="btn btn-ghost btn-sm" onclick="nextWizard(2)">← Back</button>
+        <button class="btn btn-primary btn-lg" onclick="startBuild()" id="launch-btn">
+          ⚡ Launch my company — uses 💎 1 credit
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ BUILD ═══════════ -->
+<div id="screen-build" class="screen">
+  <div class="build-card">
+    <div class="build-top">
+      <div class="build-spinner-wrap">
+        <div class="build-ring"></div>
+        <div class="build-ring2"></div>
+        <div class="build-emoji" id="build-emoji">⚡</div>
+      </div>
+      <div class="build-title" id="build-title">Building PayFlow AI…</div>
+      <div class="build-sub" id="build-sub">Your AI agents are assembling right now</div>
+    </div>
+
+    <!-- AGENT ROSTER -->
+    <div class="agent-roster">
+      <div class="agent-row" id="ag-architect">
+        <span class="ag-icon">🧠</span>
+        <div><div class="ag-name">Architect Agent</div><div class="ag-task">Designing product structure & ICP</div></div>
+        <span class="ag-status">Waiting</span>
+      </div>
+      <div class="agent-row" id="ag-builder">
+        <span class="ag-icon">💻</span>
+        <div><div class="ag-name">Builder Agent</div><div class="ag-task">Coding product & landing page</div></div>
+        <span class="ag-status">Waiting</span>
+      </div>
+      <div class="agent-row" id="ag-growth">
+        <span class="ag-icon">📣</span>
+        <div><div class="ag-name">Growth Agent</div><div class="ag-task">Setting up ads & outreach</div></div>
+        <span class="ag-status">Waiting</span>
+      </div>
+      <div class="agent-row" id="ag-payments">
+        <span class="ag-icon">💳</span>
+        <div><div class="ag-name">Payments Agent</div><div class="ag-task">Configuring Stripe & pricing</div></div>
+        <span class="ag-status">Waiting</span>
+      </div>
+      <div class="agent-row" id="ag-ceo">
+        <span class="ag-icon">🤖</span>
+        <div><div class="ag-name">CEO Agent</div><div class="ag-task">Initializing command center</div></div>
+        <span class="ag-status">Waiting</span>
+      </div>
+    </div>
+
+    <div class="build-progress-wrap">
+      <div class="build-progress-label">
+        <span id="build-prog-label">Initializing…</span>
+        <span id="build-prog-pct">0%</span>
+      </div>
+      <div class="build-bar"><div class="build-bar-fill" id="build-bar"></div></div>
+    </div>
+
+    <div class="build-log" id="build-log">
+      <span class="log-info">→ Starting Forge build sequence for PayFlow AI…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SUCCESS ═══════════ -->
+<div id="screen-success" class="screen">
+  <div class="success-card">
+    <span class="success-emoji">🎉</span>
+    <h1 class="success-h1" id="success-company-name">PayFlow AI is live!</h1>
+    <p class="success-sub">Your AI CEO is already working. First outreach email goes out in 4 minutes. Check back tonight for your first daily report.</p>
+
+    <div class="success-url">
+      <span id="success-url-text">payflowai.forge.app</span>
+      <span onclick="copyUrl()">Copy link ↗</span>
+    </div>
+
+    <div class="success-achievements">
+      <div class="sa-item">
+        <div class="sa-icon">🚀</div>
+        <div class="sa-label">Launched</div>
+      </div>
+      <div class="sa-item">
+        <div class="sa-icon">💳</div>
+        <div class="sa-label">Stripe live</div>
+      </div>
+      <div class="sa-item">
+        <div class="sa-icon">📧</div>
+        <div class="sa-label">Outreach ready</div>
+      </div>
+      <div class="sa-item">
+        <div class="sa-icon">📣</div>
+        <div class="sa-label">Ads queued</div>
+      </div>
+    </div>
+
+    <button class="btn btn-green btn-full btn-xl" onclick="goDashboard()" style="margin-bottom:12px;">
+      Open my dashboard →
+    </button>
+    <button class="btn btn-ghost btn-full" onclick="goCreate()">⚡ Forge another company</button>
+    <p style="font-size:12px;color:var(--dim);margin-top:16px;">💎 1 credit used · <span style="color:var(--purple2);" id="success-credits-left">1 credit remaining</span></p>
+  </div>
+</div>
+
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<div id="screen-dashboard" class="screen">
+  <aside class="sidebar">
+    <div class="sb-logo"><span class="logo">⬡ FORGE</span></div>
+
+    <div class="sb-company">
+      <div class="sb-company-label">Active company</div>
+      <div class="sb-company-name">PayFlow AI <span style="color:var(--dim);">⌄</span></div>
+      <div class="sb-company-status"><span class="dot-live"></span> Live · earning</div>
+    </div>
+
+    <div class="sb-credits">
+      <div class="sb-credit-row">
+        <span class="sb-credit-label">💎 Credits</span>
+        <span class="sb-credit-val" id="dash-credits">1</span>
+      </div>
+      <div class="sb-credit-bar"><div class="sb-credit-fill" id="dash-credit-bar" style="width:33%"></div></div>
+      <button class="btn btn-primary btn-full btn-sm" style="margin-top:10px;font-size:12px;" onclick="goCreate()">⚡ Forge new company</button>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-section-label">Company</div>
+      <div class="sb-item active" onclick="switchTab('overview',this)"><span>📊</span> Overview</div>
+      <div class="sb-item" onclick="switchTab('chat',this)"><span>💬</span> CEO Chat <span class="sb-badge">3</span></div>
+      <div class="sb-item" onclick="switchTab('agents',this)"><span>🤖</span> Agents <span class="sb-badge purple">5</span></div>
+      <div class="sb-item" onclick="switchTab('analytics',this)"><span>📈</span> Analytics</div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">You</div>
+      <div class="sb-item" onclick="goHome()"><span>🏠</span> My companies</div>
+      <div class="sb-item"><span>🏆</span> Achievements</div>
+      <div class="sb-item"><span>⚙️</span> Settings</div>
+    </div>
+
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar">T</div>
+        <div>
+          <div class="sb-uname">Thomas</div>
+          <div class="sb-uplan">🔥 3-day streak · Lvl 1</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">PayFlow AI</span>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span style="font-size:12px;color:var(--dim);">↗ payflowai.forge.app</span>
+        <button class="btn btn-ghost btn-sm">📋 Daily report</button>
+        <button class="btn btn-primary btn-sm" onclick="switchTab('chat',null)">💬 Chat CEO</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-overview" onclick="switchTab('overview',null)">Overview</button>
+      <button class="tab" id="tab-chat" onclick="switchTab('chat',null)">CEO Chat</button>
+      <button class="tab" id="tab-agents" onclick="switchTab('agents',null)">Agents</button>
+      <button class="tab" id="tab-analytics" onclick="switchTab('analytics',null)">Analytics</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="tab-content active" id="tc-overview">
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-label">Revenue (30d)</div>
+          <div class="kpi-val" style="color:var(--green)">$487</div>
+          <div class="kpi-delta up">↑ 34% vs last month</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Customers</div>
+          <div class="kpi-val">14</div>
+          <div class="kpi-delta up">↑ 7 this week</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Emails sent</div>
+          <div class="kpi-val">1,240</div>
+          <div class="kpi-delta up">↑ 18% open rate</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Agent tasks</div>
+          <div class="kpi-val">384</div>
+          <div class="kpi-delta" style="color:var(--dim)">23 today</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Recent activity</span><span class="card-action">View all</span></div>
+          <div class="card-body">
+            <div class="act-list">
+              <div class="act-item"><div class="act-dot" style="background:rgba(16,185,129,.1)">💰</div><div class="act-body"><div class="act-title">New payment received</div><div class="act-meta">marc@agence.fr · Starter plan</div></div><span class="act-val">+$49</span></div>
+              <div class="act-item"><div class="act-dot" style="background:rgba(124,58,237,.1)">📧</div><div class="act-body"><div class="act-title">Outreach batch sent</div><div class="act-meta">40 emails · 3 replies already</div></div><span class="act-val" style="color:var(--cyan)">+3 leads</span></div>
+              <div class="act-item"><div class="act-dot" style="background:rgba(245,158,11,.1)">📣</div><div class="act-body"><div class="act-title">Meta ad launched</div><div class="act-meta">€15/day · French freelancers</div></div><span class="act-val" style="color:var(--dim)">Live</span></div>
+              <div class="act-item"><div class="act-dot" style="background:rgba(6,182,212,.1)">🌐</div><div class="act-body"><div class="act-title">A/B test launched</div><div class="act-meta">Variant B: +12% early CTR signal</div></div></div>
+              <div class="act-item"><div class="act-dot" style="background:rgba(16,185,129,.1)">💰</div><div class="act-body"><div class="act-title">Payment received</div><div class="act-meta">lea@freelance.io · Pro plan</div></div><span class="act-val">+$99</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Active agents</span><span class="card-action">Manage</span></div>
+            <div class="card-body">
+              <div class="ag-status-list">
+                <div class="ag-status-item"><span class="ag-status-icon">📧</span><div><div class="ag-status-name">Sales Agent</div><div class="ag-status-task">Sending batch #12</div></div><span class="badge badge-run">● Running</span></div>
+                <div class="ag-status-item"><span class="ag-status-icon">📣</span><div><div class="ag-status-name">Ads Agent</div><div class="ag-status-task">Optimizing CPL</div></div><span class="badge badge-run">● Running</span></div>
+                <div class="ag-status-item"><span class="ag-status-icon">🌐</span><div><div class="ag-status-name">Growth Agent</div><div class="ag-status-task">SEO complete</div></div><span class="badge badge-idle">Idle</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NEXT COMPANY CARD -->
+          <div class="add-company-cta" onclick="goCreate()">
+            <div style="font-size:32px;">⚡</div>
+            <h4>Forge a 2nd company</h4>
+            <p>Complete the daily challenge<br>+2 bonus credits 💎💎</p>
+            <div class="cost-tag">💎 1 credit · Free plan</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="live-feed-block">
+        <div class="live-feed-head"><span class="dot-live"></span> Live across all Forge companies</div>
+        <div class="live-feed-items" id="dash-feed">
+          <div class="live-feed-item"><span class="lf-emoji">💰</span><span class="lf-time">just now</span><div class="lf-text"><strong>████ AI</strong> received a payment</div><span class="lf-amount">+$149</span></div>
+          <div class="live-feed-item"><span class="lf-emoji">🚀</span><span class="lf-time">1m</span><div class="lf-text"><strong>████ Labs</strong> just went live</div></div>
+          <div class="live-feed-item"><span class="lf-emoji">📧</span><span class="lf-time">2m</span><div class="lf-text"><strong>████████ Corp</strong> sent 60 outreach emails</div></div>
+          <div class="live-feed-item"><span class="lf-emoji">💰</span><span class="lf-time">3m</span><div class="lf-text"><strong>████ Studio</strong> closed a sale</div><span class="lf-amount">+$97</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CEO CHAT -->
+    <div class="tab-content" id="tc-chat">
+      <div class="chat-layout">
+        <div class="chat-msgs" id="chat-msgs">
+          <div class="chat-msg ceo">
+            <div class="chat-av av-ceo">CEO</div>
+            <div>
+              <div class="chat-bubble">
+                Good morning, Thomas. Here's today's briefing for <strong>PayFlow AI</strong>.
+                <div class="report-card">
+                  <div class="report-title">📊 Daily Report — June 27</div>
+                  <div class="report-row"><span class="report-key">Revenue today</span><span class="report-val rv-green">+$148</span></div>
+                  <div class="report-row"><span class="report-key">New customers</span><span class="report-val">3</span></div>
+                  <div class="report-row"><span class="report-key">Emails sent</span><span class="report-val">80</span></div>
+                  <div class="report-row"><span class="report-key">Open rate</span><span class="report-val">21%</span></div>
+                  <div class="report-row"><span class="report-key">Meta CPL</span><span class="report-val">€4.20</span></div>
+                </div>
+              </div>
+              <div class="chat-meta">Your AI CEO · 08:00</div>
+            </div>
+          </div>
+          <div class="chat-msg user">
+            <div class="chat-av av-me">T</div>
+            <div>
+              <div class="chat-bubble">Double the ad spend. Target freelance designers too — focus on the pain of chasing unpaid invoices.</div>
+              <div class="chat-meta">You · 09:15</div>
+            </div>
+          </div>
+          <div class="chat-msg ceo">
+            <div class="chat-av av-ceo">CEO</div>
+            <div>
+              <div class="chat-bubble">Done. Budget doubled to €30/day. New ad set targeting designers (Canva/Behance audiences) with headline: <em>"Stop chasing clients. Let AI do it."</em> Landing page CTA updated for this segment. First results in 4-6h — I'll report tonight.</div>
+              <div class="chat-meta">Your AI CEO · 09:16</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-bar">
+          <textarea class="chat-textarea" id="chat-input" placeholder="Tell your CEO what to do next…" rows="1"></textarea>
+          <button class="send-btn" onclick="sendChat()">↑</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENTS -->
+    <div class="tab-content" id="tc-agents">
+      <div class="agents-grid-dash">
+        <div class="agent-card"><div class="ac-header"><div class="ac-icon" style="background:rgba(16,185,129,.1)">📧</div><div><div class="ac-name">Sales Agent</div><div class="ac-role">Outreach & prospecting</div></div><span class="badge badge-run" style="margin-left:auto">● Running</span></div><div class="ac-tasks"><div class="ac-task-item"><span>✓</span>Scraped 200 new leads</div><div class="ac-task-item"><span>✓</span>Sent batch #12 (40 emails)</div><div class="ac-task-item"><span>⏳</span>Queued: follow-up 3 warm replies</div></div><div class="ac-footer"><span class="ac-stat">Today: <strong>23 tasks</strong></span><button class="btn btn-ghost btn-sm">Configure</button></div></div>
+        <div class="agent-card"><div class="ac-header"><div class="ac-icon" style="background:rgba(245,158,11,.1)">📣</div><div><div class="ac-name">Ads Agent</div><div class="ac-role">Meta advertising</div></div><span class="badge badge-run" style="margin-left:auto">● Running</span></div><div class="ac-tasks"><div class="ac-task-item"><span>✓</span>Launched 2 ad sets at €30/day</div><div class="ac-task-item"><span>✓</span>A/B testing 3 creatives</div><div class="ac-task-item"><span>⏳</span>Pausing underperforming ad</div></div><div class="ac-footer"><span class="ac-stat">CPL: <strong>€4.20</strong></span><button class="btn btn-ghost btn-sm">Configure</button></div></div>
+        <div class="agent-card"><div class="ac-header"><div class="ac-icon" style="background:rgba(6,182,212,.1)">🌐</div><div><div class="ac-name">Growth Agent</div><div class="ac-role">SEO & content</div></div><span class="badge badge-idle" style="margin-left:auto">Idle</span></div><div class="ac-tasks"><div class="ac-task-item"><span>✓</span>Published 2 SEO posts</div><div class="ac-task-item"><span>✓</span>Built 12 backlinks</div><div class="ac-task-item"><span>○</span>Next: content brief needed</div></div><div class="ac-footer"><span class="ac-stat">Traffic: <strong>+140%</strong> MoM</span><button class="btn btn-ghost btn-sm">Configure</button></div></div>
+        <div class="agent-card"><div class="ac-header"><div class="ac-icon" style="background:rgba(124,58,237,.1)">💻</div><div><div class="ac-name">Product Agent</div><div class="ac-role">Features & fixes</div></div><span class="badge badge-q" style="margin-left:auto">⏳ Queued</span></div><div class="ac-tasks"><div class="ac-task-item"><span>✓</span>Shipped onboarding v2</div><div class="ac-task-item"><span>✓</span>Fixed Stripe webhook</div><div class="ac-task-item"><span>⏳</span>Building: WhatsApp reminders</div></div><div class="ac-footer"><span class="ac-stat">Shipped: <strong>8 features</strong></span><button class="btn btn-ghost btn-sm">Configure</button></div></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="tab-content" id="tc-analytics">
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Revenue — last 8 weeks</span></div>
+          <div class="card-body"><div class="bar-chart" id="rev-chart"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Conversion funnel</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 14px;background:rgba(255,255,255,.02);border-radius:8px;"><span>Visitors</span><strong>1,840</strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 14px;background:rgba(255,255,255,.02);border-radius:8px;"><span>Sign-ups</span><strong>510 <span style="color:var(--dim);font-weight:400;">28%</span></strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 14px;background:rgba(255,255,255,.02);border-radius:8px;"><span>Trial started</span><strong>180 <span style="color:var(--dim);font-weight:400;">9.8%</span></strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 14px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;"><span>Paid customers</span><strong style="color:var(--purple2)">14 <span style="color:var(--dim);font-weight:400;">1.8%</span></strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════ STATE ═══════════════ */
+let credits = 2;
+let selectedPlan = 'free';
+let companyName = 'PayFlow AI';
+let wizardStep = 1;
+let isSpinning = false;
+let currentCompanyId = null;
+let currentCompanyData = null;
+let currentSiteUrl = null;
+
+// API base — same origin when served from Express
+const API = '';
+
+// Check if server is running
+async function checkServer() {
+  try {
+    const r = await fetch(API + '/api/health');
+    return r.ok;
+  } catch { return false; }
+}
+
+const IDEA_POOL = [
+  'An AI that audits contracts for SMBs and flags risk in plain language.',
+  'An AI that writes weekly investor updates for early-stage startups, pulling data from Stripe & Notion.',
+  'An AI that monitors competitor pricing daily and sends personalized alerts.',
+  'An AI that turns Loom recordings into polished case studies automatically.',
+  'An AI that generates localized SEO content for e-commerce brands in 12 languages.',
+  'An AI that writes cold email sequences for agencies based on their target industry.',
+  'An AI that auto-responds to customer support tickets for SaaS companies.',
+  'An AI that creates social media posts from a company\'s blog content, every day.',
+  'An AI that analyzes job descriptions and writes tailored cover letters for freelancers.',
+  'An AI that summarizes legal terms of service into plain English for consumers.',
+  'An AI that helps restaurants generate their weekly social media content calendar.',
+  'An AI that turns raw meeting notes into structured action items and follow-ups.',
+];
+
+const CEO_REPLIES = [
+  'On it. Analyzing and queuing the work now — I\'ll brief you tonight with results.',
+  'Done. Already running. First signal expected in 3-4 hours.',
+  'Executed. One flag: this might cannibalize campaign #2. I\'ll run a small test first before going all-in. Confirm?',
+  'Smart move. Reallocating budget to the top performer now. Expected CPL drop: ~28%.',
+  'I\'ve identified 3 high-intent leads from today\'s replies. Want me to prioritize them for personal outreach?',
+  'Understood. Pausing, regrouping, and relaunching with the adjusted angle. Target: first conversion within 48h.',
+];
+let ceoIdx = 0;
+
+/* ═══════════════ NAVIGATION ═══════════════ */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function goHome() { show('screen-home'); }
+function goCreate() { wizardStep = 1; updateWizardUI(); show('screen-create'); }
+function goCreateSurprise() { goCreate(); setTimeout(spinSlot, 300); }
+function goCreateWithIdea() {
+  const val = document.getElementById('home-idea-input').value.trim();
+  if (val) document.getElementById('idea-textarea').value = val;
+  goCreate();
+}
+function goDashboard() { show('screen-dashboard'); buildChart(); startDashFeed(); }
+function goSplash() { show('screen-splash'); }
+
+/* ═══════════════ SPLASH TICKER ═══════════════ */
+const tickerEvents = [
+  '💰 <strong>████ AI</strong> just received <span class="amount">$149</span> — 3 seconds ago',
+  '🚀 <strong>████ Labs</strong> went live — 1 minute ago',
+  '💰 <strong>████████ Corp</strong> closed a sale — <span class="amount">$97</span>',
+  '📧 <strong>████ Studio</strong> sent 60 outreach emails — 2 min ago',
+  '💰 <strong>████ Flow</strong> received a payment — <span class="amount">$49</span>',
+  '🌐 <strong>████████ AI</strong> hit first page on Google — today',
+];
+let tickerIdx = 0;
+function rotateTicker() {
+  const el = document.getElementById('ticker');
+  if (!el) return;
+  tickerIdx = (tickerIdx + 1) % tickerEvents.length;
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(-8px)';
+  setTimeout(() => {
+    el.innerHTML = `<div class="ticker-item">${tickerEvents[tickerIdx]}</div>`;
+    el.style.transition = 'all .4s';
+    el.style.opacity = '1';
+    el.style.transform = 'none';
+  }, 300);
+}
+setInterval(rotateTicker, 2800);
+
+/* ═══════════════ HOME FOMO FEED ═══════════════ */
+const fomoEvents = [
+  { emoji:'💰', text:'<strong>████ AI</strong> closed a sale', amount:'+$149' },
+  { emoji:'🚀', text:'<strong>████ Labs</strong> just went live', amount:'' },
+  { emoji:'📧', text:'<strong>████████</strong> sent 80 emails', amount:'' },
+  { emoji:'💰', text:'<strong>████ Corp</strong> received payment', amount:'+$97' },
+  { emoji:'📣', text:'<strong>████ Studio</strong> launched a Meta ad', amount:'' },
+  { emoji:'💰', text:'<strong>████ Flow</strong> earned while they slept', amount:'+$49' },
+  { emoji:'🌐', text:'<strong>████ AI</strong> hit page 1 on Google', amount:'' },
+];
+let fomoIdx = 0;
+function addFomoItem() {
+  const feed = document.getElementById('home-fomo-feed');
+  if (!feed) return;
+  const ev = fomoEvents[fomoIdx % fomoEvents.length]; fomoIdx++;
+  const div = document.createElement('div');
+  div.className = 'fomo-item';
+  div.innerHTML = `<span class="fomo-emoji">${ev.emoji}</span><div class="fomo-text">${ev.text}</div><span class="fomo-time">now</span>${ev.amount ? `<span class="fomo-amount">${ev.amount}</span>` : ''}`;
+  feed.insertBefore(div, feed.firstChild);
+  while (feed.children.length > 5) feed.removeChild(feed.lastChild);
+}
+setInterval(addFomoItem, 3800);
+
+/* ═══════════════ SLOT MACHINE ═══════════════ */
+let slotIdx = 0;
+function spinSlot() {
+  if (isSpinning) return;
+  isSpinning = true;
+  const display = document.getElementById('slot-text');
+  const textarea = document.getElementById('idea-textarea');
+  let spins = 0; const maxSpins = 14;
+  const spinInterval = setInterval(() => {
+    const rand = IDEA_POOL[Math.floor(Math.random() * IDEA_POOL.length)];
+    display.textContent = rand;
+    display.parentElement.classList.add('slot-spinning');
+    spins++;
+    if (spins >= maxSpins) {
+      clearInterval(spinInterval);
+      slotIdx = (slotIdx + 1) % IDEA_POOL.length;
+      const final = IDEA_POOL[slotIdx];
+      display.textContent = final;
+      textarea.value = final;
+      display.parentElement.classList.remove('slot-spinning');
+      isSpinning = false;
+      // flash border
+      const sm = document.querySelector('.slot-machine');
+      sm.style.borderColor = 'rgba(124,58,237,.8)';
+      sm.style.boxShadow = '0 0 20px rgba(124,58,237,.3)';
+      setTimeout(() => { sm.style.borderColor=''; sm.style.boxShadow=''; }, 800);
+    }
+  }, 80);
+}
+
+function pickChip(el) {
+  const map = {
+    'Contract auditor': 'An AI that audits contracts for SMBs and flags legal risk in plain language.',
+    'SEO content bot': 'An AI that generates SEO-optimized blog content for e-commerce brands, targeting high-value keywords.',
+    'Investor updates': 'An AI that writes polished monthly investor updates for startups, pulling data from Stripe and Notion automatically.',
+    'Pricing monitor': 'An AI that monitors competitor pricing daily and sends personalized strategic alerts.',
+    'HR assistant': 'An AI HR assistant for small teams — handles job posts, interviews, and onboarding paperwork.',
+    'Social media AI': 'An AI that creates daily social media content for brands from their blog and product updates.',
+  };
+  const txt = map[el.textContent] || el.textContent;
+  document.getElementById('idea-textarea').value = txt;
+  document.getElementById('slot-text').textContent = txt;
+}
+
+/* ═══════════════ WIZARD ═══════════════ */
+function updateWizardUI() {
+  [1,2,3].forEach(i => {
+    document.getElementById('wp'+i).classList.toggle('active', i===wizardStep);
+    const ws = document.getElementById('ws'+i);
+    ws.classList.remove('active','done');
+    if (i === wizardStep) ws.classList.add('active');
+    else if (i < wizardStep) ws.classList.add('done');
+    const circ = ws.querySelector('.ws-circle');
+    circ.textContent = i < wizardStep ? '✓' : i;
+  });
+}
+function nextWizard(step) {
+  wizardStep = step;
+  updateWizardUI();
+}
+function selCat(el) {
+  el.closest('.cat-grid').querySelectorAll('.cat-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function selPlan(plan) {
+  selectedPlan = plan;
+  ['free','founder'].forEach(p => document.getElementById('plan-'+p).classList.toggle('selected', p===plan));
+}
+
+/* ═══════════════ BUILD SEQUENCE — REAL API ═══════════════ */
+function resetAgents() {
+  ['ag-architect','ag-builder','ag-payments','ag-growth','ag-ceo'].forEach(id => {
+    const row = document.getElementById(id);
+    if (!row) return;
+    row.classList.remove('active','done');
+    row.querySelector('.ag-status').textContent = 'Waiting';
+  });
+}
+
+function handleSSEEvent(event, data) {
+  const bar = document.getElementById('build-bar');
+  const pct = document.getElementById('build-prog-pct');
+  const lbl = document.getElementById('build-prog-label');
+  const logEl = document.getElementById('build-log');
+
+  switch (event) {
+    case 'agent': {
+      const row = document.getElementById(data.id);
+      if (!row) break;
+      row.classList.remove('active','done');
+      row.classList.add(data.status === 'done' ? 'done' : 'active');
+      row.querySelector('.ag-status').textContent = data.status === 'done' ? '✓ Done' : '● Working';
+      if (data.task) row.querySelector('.ag-task').textContent = data.task;
+      break;
+    }
+    case 'log': {
+      const div = document.createElement('div');
+      div.innerHTML = `<span class="${data.cls || 'log-info'}">${data.msg}</span>`;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+      break;
+    }
+    case 'progress': {
+      if (bar) bar.style.width = (data.pct || 0) + '%';
+      if (pct) pct.textContent = (data.pct || 0) + '%';
+      if (lbl) lbl.textContent = data.label || '';
+      break;
+    }
+    case 'complete': {
+      currentCompanyId = data.companyId;
+      currentCompanyData = data.company;
+      currentSiteUrl = data.siteUrl;
+
+      document.getElementById('build-emoji').textContent = data.company?.emoji || '🎉';
+      document.getElementById('build-title').textContent = data.company?.name + ' is live!';
+
+      // Update success screen
+      document.getElementById('success-company-name').textContent = (data.company?.name || companyName) + ' is live!';
+      document.getElementById('success-url-text').textContent = data.siteUrl || companyName.toLowerCase().replace(/\s+/g,'-') + '.forge.app';
+
+      // Update dashboard company name
+      const dashName = document.querySelector('.sb-company-name');
+      if (dashName) dashName.childNodes[0].textContent = data.company?.name || companyName;
+
+      setTimeout(() => {
+        show('screen-success');
+        launchConfetti();
+        showAchievement('🚀', 'Company launched!');
+        document.getElementById('success-credits-left').textContent = credits + ' credit' + (credits===1?'':'s') + ' remaining';
+      }, 700);
+      break;
+    }
+    case 'error': {
+      document.getElementById('build-emoji').textContent = '❌';
+      document.getElementById('build-title').textContent = 'Something went wrong';
+      document.getElementById('build-sub').textContent = data.message || 'Check your .env and server logs';
+      const div = document.createElement('div');
+      div.innerHTML = `<span class="log-act">✗ Error: ${data.message}</span>`;
+      logEl.appendChild(div);
+      break;
+    }
+  }
+}
+
+async function startBuild() {
+  companyName = document.getElementById('company-name-input').value.trim() || 'Your Company';
+  const idea = document.getElementById('idea-textarea').value.trim() || 'An AI company';
+  const category = document.querySelector('.cat-opt.selected .label')?.textContent || 'B2B SaaS';
+
+  credits--;
+  updateCredits();
+  show('screen-build');
+
+  document.getElementById('build-title').textContent = 'Building ' + companyName + '…';
+  document.getElementById('build-sub').textContent = 'Your AI agents are assembling right now';
+  document.getElementById('build-emoji').textContent = '⚡';
+
+  const logEl = document.getElementById('build-log');
+  logEl.innerHTML = '<span class="log-info">→ Connecting to Forge API…</span>';
+  resetAgents();
+
+  // Spinning emoji while we wait
+  const emojis = ['⚡','🧠','💻','💳','📣','🤖','⚡'];
+  let eIdx = 0;
+  const emojiInterval = setInterval(() => {
+    document.getElementById('build-emoji').textContent = emojis[eIdx % emojis.length];
+    eIdx++;
+  }, 900);
+
+  try {
+    const serverOk = await checkServer();
+    if (!serverOk) {
+      // Server not running — show setup instructions
+      clearInterval(emojiInterval);
+      document.getElementById('build-emoji').textContent = '⚙️';
+      document.getElementById('build-title').textContent = 'Start the server first';
+      document.getElementById('build-sub').textContent = '';
+      logEl.innerHTML = `
+<span class="log-act">→ Forge server is not running.</span>
+<br><br>
+<span class="log-info">To start the real build, run these commands in your terminal:</span>
+<br><br>
+<span class="log-ok">  cd "${window.location.pathname.split('/').slice(0,-1).join('/') || '.'}"</span>
+<span class="log-ok">  cp .env.example .env</span>
+<span class="log-ok">  # Add your ANTHROPIC_API_KEY to .env</span>
+<span class="log-ok">  npm install</span>
+<span class="log-ok">  npm start</span>
+<br><br>
+<span class="log-info">Then open http://localhost:3000 and try again.</span>`;
+      document.getElementById('build-prog-label').textContent = 'Server offline';
+      return;
+    }
+
+    // Real SSE stream
+    const response = await fetch(API + '/api/create-company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idea,
+        name: companyName,
+        category,
+        founderEmail: 'thomas@victoire.ai',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete line
+
+      let currentEvent = null;
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith('data: ') && currentEvent) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            handleSSEEvent(currentEvent, data);
+          } catch (e) { /* skip malformed JSON */ }
+          currentEvent = null;
+        }
+      }
+    }
+
+  } catch (err) {
+    console.error(err);
+    clearInterval(emojiInterval);
+    document.getElementById('build-emoji').textContent = '❌';
+    document.getElementById('build-title').textContent = 'Build failed';
+    const div = document.createElement('div');
+    div.innerHTML = `<span class="log-act">✗ ${err.message}</span>`;
+    logEl.appendChild(div);
+  } finally {
+    clearInterval(emojiInterval);
+  }
+}
+
+/* ═══════════════ CONFETTI ═══════════════ */
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const pieces = Array.from({length: 120}, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * 200,
+    w: 6 + Math.random() * 10, h: 4 + Math.random() * 6,
+    color: ['#7c3aed','#a78bfa','#06b6d4','#10b981','#f59e0b','#ef4444','#fff'][Math.floor(Math.random()*7)],
+    vx: (Math.random()-0.5)*4, vy: 2 + Math.random()*4,
+    rot: Math.random()*360, rotV: (Math.random()-0.5)*8,
+    life: 1,
+  }));
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.rot += p.rotV; p.vy += 0.08;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180);
+      ctx.globalAlpha = Math.max(0,1-(p.y/canvas.height)*1.2);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+    });
+    frame++;
+    if (frame < 180) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* ═══════════════ ACHIEVEMENT TOAST ═══════════════ */
+function showAchievement(icon, msg) {
+  const toast = document.getElementById('achievement-toast');
+  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-msg').textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3600);
+}
+
+/* ═══════════════ CREDITS ═══════════════ */
+function updateCredits() {
+  ['home-credits','create-credits','dash-credits'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = credits;
+  });
+  const fill = document.getElementById('dash-credit-bar');
+  if (fill) fill.style.width = Math.min(100, (credits/3)*100) + '%';
+}
+function spendCredit() {
+  if (credits <= 0) { showAchievement('💸','No credits left — upgrade!'); return; }
+  const pill = document.querySelector('.credit-pill');
+  if (pill) { pill.style.transform='scale(1.2)'; setTimeout(()=>pill.style.transform='',200); }
+  goCreate();
+}
+
+/* ═══════════════ DASHBOARD TABS ═══════════════ */
+function switchTab(tab, sidebarItem) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  const tabBtn = document.getElementById('tab-'+tab);
+  const tabContent = document.getElementById('tc-'+tab);
+  if (tabBtn) tabBtn.classList.add('active');
+  if (tabContent) tabContent.classList.add('active');
+  if (sidebarItem) sidebarItem.classList.add('active');
+  if (tab === 'analytics') buildChart();
+}
+
+/* ═══════════════ ANALYTICS CHART ═══════════════ */
+function buildChart() {
+  const el = document.getElementById('rev-chart');
+  if (!el || el.children.length) return;
+  const weeks = ['W19','W20','W21','W22','W23','W24','W25','W26'];
+  const vals   = [28,64,85,110,170,220,340,487];
+  const max = Math.max(...vals);
+  weeks.forEach((w,i) => {
+    const g = document.createElement('div'); g.className = 'bar-grp';
+    const h = Math.max((vals[i]/max)*165, 4);
+    g.innerHTML = `<div class="bar" style="height:${h}px" title="$${vals[i]}"></div><div class="bar-lbl">${w}</div>`;
+    el.appendChild(g);
+  });
+}
+
+/* ═══════════════ DASH LIVE FEED ═══════════════ */
+const dashFeedEvents = [
+  { emoji:'💰', text:'<strong>████ AI</strong> received payment', amount:'+$149' },
+  { emoji:'🚀', text:'<strong>████████</strong> just went live', amount:'' },
+  { emoji:'📧', text:'<strong>████ Labs</strong> got a warm reply', amount:'' },
+  { emoji:'💰', text:'<strong>████ Corp</strong> closed a sale', amount:'+$97' },
+  { emoji:'📣', text:'<strong>████ Studio</strong> launched Meta ad', amount:'' },
+  { emoji:'💰', text:'<strong>████ Flow</strong> received payment', amount:'+$49' },
+];
+let dashFeedIdx = 0;
+function addDashFeed() {
+  const feed = document.getElementById('dash-feed');
+  if (!feed) return;
+  const ev = dashFeedEvents[dashFeedIdx % dashFeedEvents.length]; dashFeedIdx++;
+  const div = document.createElement('div'); div.className = 'live-feed-item';
+  div.innerHTML = `<span class="lf-emoji">${ev.emoji}</span><span class="lf-time">just now</span><div class="lf-text">${ev.text}</div>${ev.amount ? `<span class="lf-amount">${ev.amount}</span>` : ''}`;
+  feed.insertBefore(div, feed.firstChild);
+  while (feed.children.length > 5) feed.removeChild(feed.lastChild);
+}
+function startDashFeed() { setInterval(addDashFeed, 4500); }
+
+/* ═══════════════ CEO CHAT — REAL CLAUDE API ═══════════════ */
+let isChatLoading = false;
+
+function appendChatMsg(role, html, isHTML = false) {
+  const container = document.getElementById('chat-msgs');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role === 'user' ? 'user' : 'ceo'}`;
+  const now = new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+  const avatar = role === 'user'
+    ? `<div class="chat-av av-me">T</div>`
+    : `<div class="chat-av av-ceo">CEO</div>`;
+  const bubble = isHTML ? html : html.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  div.innerHTML = `${avatar}<div><div class="chat-bubble">${bubble}</div><div class="chat-meta">${role === 'user' ? 'You' : 'Your AI CEO'} · ${now}</div></div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function addTypingIndicator() {
+  const container = document.getElementById('chat-msgs');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ceo';
+  div.id = 'typing-indicator';
+  div.innerHTML = `<div class="chat-av av-ceo">CEO</div><div><div class="chat-bubble" style="color:var(--dim)"><span style="animation:blink 1s infinite;display:inline-block">●</span> <span style="animation:blink 1s .3s infinite;display:inline-block">●</span> <span style="animation:blink 1s .6s infinite;display:inline-block">●</span></div></div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendChat() {
+  if (isChatLoading) return;
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  appendChatMsg('user', msg);
+
+  // If no real company yet, fall back to local replies
+  if (!currentCompanyId) {
+    addTypingIndicator();
+    await new Promise(r => setTimeout(r, 1000 + Math.random() * 600));
+    document.getElementById('typing-indicator')?.remove();
+    const reply = CEO_REPLIES[ceoIdx % CEO_REPLIES.length]; ceoIdx++;
+    appendChatMsg('ceo', reply);
+    return;
+  }
+
+  isChatLoading = true;
+  const sendBtn = document.querySelector('.send-btn');
+  if (sendBtn) sendBtn.style.opacity = '0.4';
+
+  addTypingIndicator();
+
+  try {
+    const res = await fetch(API + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyId: currentCompanyId, message: msg }),
+    });
+
+    document.getElementById('typing-indicator')?.remove();
+
+    if (!res.ok) {
+      const err = await res.json();
+      appendChatMsg('ceo', `❌ ${err.error || 'Something went wrong'}`);
+      return;
+    }
+
+    const { reply } = await res.json();
+    appendChatMsg('ceo', reply);
+
+  } catch (err) {
+    document.getElementById('typing-indicator')?.remove();
+    appendChatMsg('ceo', `⚠️ Could not reach the server. Make sure it's running.`);
+  } finally {
+    isChatLoading = false;
+    if (sendBtn) sendBtn.style.opacity = '1';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Enter' && !e.shiftKey && document.activeElement.id==='chat-input') { e.preventDefault(); sendChat(); }
+});
+
+/* ═══════════════ MISC ═══════════════ */
+function copyUrl() { showAchievement('📋','Link copied!'); }
+
+// Daily challenge bar animation on home load
+setTimeout(() => {
+  const bar = document.querySelector('.dc-bar-fill');
+  if (bar) bar.style.width = '33%';
+}, 600);
+
+// Init credits display
+updateCredits();
+</script>
+</body>
+</html>
