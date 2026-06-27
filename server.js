@@ -980,6 +980,18 @@ app.get('/api/account', requireAuth, async (req, res) => {
 // ── CREDIT PACKS ──
 app.get('/api/credits/packs', (req, res) => res.json(CREDIT_PACKS));
 
+// ── CREDIT SPEND (agent runs, etc.) ──
+app.post('/api/credits/spend', requireAuth, async (req, res) => {
+  const { amount = 1 } = req.body;
+  const email = req.userEmail;
+  const cur = await dbGetCredits(email);
+  if (cur === null || cur < amount) {
+    return res.status(402).json({ error: 'insufficient_credits', credits: cur ?? 0, required: amount });
+  }
+  await dbSetCredits(email, cur - amount);
+  res.json({ credits: cur - amount });
+});
+
 // ── CREDIT BALANCE ──
 app.get('/api/credits/balance', requireAuth, async (req, res) => {
   const email = req.userEmail;

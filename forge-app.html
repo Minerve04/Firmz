@@ -1635,6 +1635,7 @@ async function authFetch(url, opts = {}) {
 }
 let selectedPackId = 'pro';
 const CREDITS_PER_CREATION = 3;
+const CREDITS_PER_AGENT_RUN = 1;
 let selectedPlan = 'free';
 let companyName = 'PayFlow AI';
 let wizardStep = 1;
@@ -2251,22 +2252,64 @@ function buildAgentStat(a) {
 }
 
 async function runAgent(type) {
+  // ── Credit check ──
+  if (credits < CREDITS_PER_AGENT_RUN) {
+    showAgentCreditModal(type);
+    return;
+  }
+
   const btn = document.getElementById('run-btn-' + type);
   if (btn) { btn.textContent = '⏳ Running…'; btn.disabled = true; }
   try {
+    // Spend 1 credit first (server-side check)
+    const spendRes = await authFetch(API + '/api/credits/spend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: CREDITS_PER_AGENT_RUN }),
+    });
+    if (spendRes.status === 402) {
+      showAgentCreditModal(type);
+      return;
+    }
+    const spendData = await spendRes.json();
+    credits = spendData.credits;
+    updateCredits();
+
+    // Run the agent
     const r = await authFetch(API + '/api/agents/' + currentCompanyId + '/' + type + '/run', { method: 'POST', headers: {'Content-Type':'application/json'} });
     const data = await r.json();
     if (data.success) {
-      showToast('✓ ' + type.charAt(0).toUpperCase() + type.slice(1) + ' Agent done!', 'success');
+      showToast('✓ ' + type.charAt(0).toUpperCase() + type.slice(1) + ' Agent done! (-💎1)', 'success');
       await loadAgents();
     } else {
       showToast('Agent error: ' + data.error, 'error');
+      // Refund on failure
+      credits += CREDITS_PER_AGENT_RUN;
+      updateCredits();
     }
   } catch(e) {
     if (e.message !== 'session_expired') showToast('Run failed', 'error');
   } finally {
     if (btn) { btn.textContent = '▶ Run'; btn.disabled = false; }
   }
+}
+
+function showAgentCreditModal(type) {
+  const agentName = { sales: 'Sales', growth: 'Growth', ads: 'Ads', product: 'Product' }[type] || type;
+  // Inject a quick inline credit banner before falling back to buy modal
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#0e0e1f;border:1px solid rgba(245,158,11,.5);border-radius:14px;padding:16px 20px;z-index:9999;display:flex;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,.6);max-width:380px;width:90%;';
+  banner.innerHTML = `
+    <span style="font-size:24px;">💎</span>
+    <div style="flex:1;">
+      <div style="font-weight:800;color:white;font-size:14px;margin-bottom:2px;">Crédits insuffisants</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.55);">Lancer ${agentName} Agent coûte 💎1 crédit. Ton solde actuel : <strong style="color:#f59e0b">${credits}</strong></div>
+    </div>
+    <button onclick="this.closest('div[style]').remove();openBuyCredits();" style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;color:#fff;border-radius:9px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:800;white-space:nowrap;">Recharger →</button>
+    <button onclick="this.closest('div[style]').remove()" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:18px;padding:0 4px;">✕</button>
+  `;
+  document.body.appendChild(banner);
+  setTimeout(() => { if (banner.parentNode) banner.remove(); }, 6000);
 }
 
 function showAgentOutput(type) {
