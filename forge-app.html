@@ -785,10 +785,16 @@ body {
       </div>
     </div>
 
-    <button class="btn btn-primary btn-xl btn-full" onclick="goHome()" style="margin-bottom:12px; font-size:16px;">
-      ⬡ Start forging →
-    </button>
-    <p class="splash-note">Free to start · 3 credits included · <a onclick="goHome()">Already a member? Sign in</a></p>
+    <div id="auth-form" style="margin-bottom:12px;">
+      <div style="display:flex;gap:8px;max-width:420px;margin:0 auto;">
+        <input class="input" id="auth-email-input" type="email" placeholder="your@email.com" style="flex:1;" onkeydown="if(event.key==='Enter')sendMagicLink()" />
+        <button class="btn btn-primary btn-lg" onclick="sendMagicLink()" id="auth-send-btn">→</button>
+      </div>
+    </div>
+    <div id="auth-sent" style="display:none;margin-bottom:12px;padding:14px 20px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;color:#10b981;font-size:14px;font-weight:600;max-width:420px;margin:0 auto 12px;">
+      ✓ Check your email — magic link sent!
+    </div>
+    <p class="splash-note">Free to start · 3 💎 credits included · No password needed</p>
 
     <!-- MINI LEADERBOARD -->
     <div class="splash-lb">
@@ -1038,10 +1044,6 @@ body {
         </div>
         <div style="background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:14px 16px;margin-top:4px;">
           <p style="font-size:13px;color:var(--muted);line-height:1.6;">💡 <strong style="color:var(--text)">Earn more credits:</strong> refer a friend and get +2 credits per signup. Complete daily challenges for bonus credits.</p>
-        </div>
-        <div style="margin-top:20px;">
-          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:8px;">Your email <span style="color:var(--purple2);">*</span> (tracks your credits + receives launch report)</label>
-          <input class="input" id="founder-email-input" type="email" placeholder="you@company.com" onblur="syncBalance(this.value)" />
         </div>
       </div>
       <div class="wp-footer">
@@ -1409,6 +1411,7 @@ body {
 /* ═══════════════ STATE ═══════════════ */
 let credits = 3;
 let userEmail = '';
+let sessionKey = localStorage.getItem('firmz_session') || '';
 let selectedPackId = 'pro';
 const CREDITS_PER_CREATION = 3;
 let selectedPlan = 'free';
@@ -1679,17 +1682,11 @@ function handleSSEEvent(event, data) {
 }
 
 async function startBuild() {
+  if (!sessionKey) { show('screen-splash'); return; }
+
   companyName = document.getElementById('company-name-input').value.trim() || 'Your Company';
   const idea = document.getElementById('idea-textarea').value.trim() || 'An AI company';
   const category = document.querySelector('.cat-opt.selected .label')?.textContent || 'B2B SaaS';
-  const founderEmail = document.getElementById('founder-email-input')?.value?.trim() || '';
-
-  if (!founderEmail) {
-    alert('Please enter your email address to track your credits.');
-    return;
-  }
-
-  userEmail = founderEmail;
 
   // Check credits before proceeding
   if (credits < CREDITS_PER_CREATION) {
@@ -1744,13 +1741,8 @@ async function startBuild() {
     // Real SSE stream
     const response = await fetch(API + '/api/create-company', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        idea,
-        name: companyName,
-        category,
-        founderEmail,
-      }),
+      headers: { 'Content-Type': 'application/json', 'x-session-key': sessionKey },
+      body: JSON.stringify({ idea, name: companyName, category }),
     });
 
     if (!response.ok) {
@@ -1996,12 +1988,110 @@ setTimeout(() => {
 // Init credits display
 updateCredits();
 
-/* ═══════════════ CREDIT SYSTEM ═══════════════ */
-async function syncBalance(email) {
-  if (!email || !email.includes('@')) return;
-  userEmail = email;
+// Restore session or show splash
+(async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (token) {
+    // Magic link return
+    await verifyMagicToken(token);
+  } else if (sessionKey) {
+    const ok = await restoreSession();
+    if (ok) { show('screen-home'); }
+    else { show('screen-splash'); }
+  } else {
+    show('screen-splash');
+  }
+})();
+
+/* ═══════════════ AUTH — MAGIC LINK ═══════════════ */
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'x-session-key': sessionKey };
+}
+
+async function sendMagicLink() {
+  const email = document.getElementById('auth-email-input')?.value?.trim();
+  if (!email || !email.includes('@')) { alert('Please enter a valid email address.'); return; }
+
+  const btn = document.getElementById('auth-send-btn');
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
+
   try {
-    const r = await fetch(API + '/api/credits/balance/' + encodeURIComponent(email));
+    const r = await fetch(API + '/api/auth/send-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await r.json();
+
+    if (data.devLink) {
+      // Dev mode: auto-verify immediately via the link
+      const token = new URL(data.devLink).searchParams.get('token');
+      await verifyMagicToken(token);
+      return;
+    }
+
+    // Production: show "check your email"
+    document.getElementById('auth-form').style.display = 'none';
+    document.getElementById('auth-sent').style.display = 'block';
+  } catch (err) {
+    alert('Error: ' + err.message);
+    if (btn) { btn.textContent = '→'; btn.disabled = false; }
+  }
+}
+
+async function verifyMagicToken(token) {
+  try {
+    const r = await fetch(API + '/api/auth/verify?token=' + token);
+    if (!r.ok) {
+      const d = await r.json();
+      alert(d.error || 'Link expired. Please request a new one.');
+      show('screen-splash');
+      return;
+    }
+    const data = await r.json();
+    sessionKey = data.sessionKey;
+    userEmail = data.email;
+    credits = data.credits;
+    localStorage.setItem('firmz_session', sessionKey);
+    localStorage.setItem('firmz_email', userEmail);
+    updateCredits();
+    show('screen-home');
+    showAchievement('👋', 'Welcome to Firmz!');
+    window.history.replaceState({}, '', '/forge-app.html');
+  } catch (err) {
+    alert('Verification failed. Please try again.');
+    show('screen-splash');
+  }
+}
+
+async function restoreSession() {
+  if (!sessionKey) return false;
+  try {
+    const r = await fetch(API + '/api/auth/me', { headers: { 'x-session-key': sessionKey } });
+    if (!r.ok) { sessionKey = ''; localStorage.removeItem('firmz_session'); return false; }
+    const data = await r.json();
+    userEmail = data.email;
+    credits = data.credits;
+    updateCredits();
+    return true;
+  } catch { return false; }
+}
+
+function logout() {
+  fetch(API + '/api/auth/logout', { method: 'POST', headers: { 'x-session-key': sessionKey } });
+  sessionKey = '';
+  userEmail = '';
+  localStorage.removeItem('firmz_session');
+  localStorage.removeItem('firmz_email');
+  show('screen-splash');
+}
+
+/* ═══════════════ CREDIT SYSTEM ═══════════════ */
+async function syncBalance() {
+  if (!sessionKey) return;
+  try {
+    const r = await fetch(API + '/api/credits/balance', { headers: { 'x-session-key': sessionKey } });
     if (r.ok) {
       const data = await r.json();
       credits = data.credits;
@@ -2082,17 +2172,10 @@ async function buyCreditPack() {
 
   // Credits purchase success
   if (params.get('credits') === 'success') {
-    const email = decodeURIComponent(params.get('email') || '');
-    if (email) {
-      syncBalance(email).then(() => {
-        show('screen-home');
-        showAchievement('💎', 'Credits added! Time to build.');
-        launchConfetti();
-      });
-    } else {
-      show('screen-home');
+    syncBalance().then(() => {
       showAchievement('💎', 'Credits added! Time to build.');
-    }
+      launchConfetti();
+    });
     window.history.replaceState({}, '', '/forge-app.html');
   }
 

@@ -40,6 +40,25 @@ function getResend() {
 }
 
 // ─────────────────────────────────────────────
+// AUTH — MAGIC LINK SESSIONS
+// ─────────────────────────────────────────────
+const magicTokens = new Map();  // token → { email, expiresAt }
+const userSessions = new Map(); // sessionKey → { email }
+const MAGIC_LINK_EXPIRY = 15 * 60 * 1000; // 15 min
+
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function requireAuth(req, res, next) {
+  const key = req.headers['x-session-key'];
+  const session = key && userSessions.get(key);
+  if (!session) return res.status(401).json({ error: 'not_authenticated' });
+  req.userEmail = session.email;
+  next();
+}
+
+// ─────────────────────────────────────────────
 // CREDIT SYSTEM
 // ─────────────────────────────────────────────
 const creditBalances = new Map(); // email → credits
@@ -466,15 +485,94 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ── SEND MAGIC LINK ──
+app.post('/api/auth/send-link', async (req, res) => {
+  const email = (req.body.email || '').toLowerCase().trim();
+  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+
+  const token = generateToken();
+  magicTokens.set(token, { email, expiresAt: Date.now() + MAGIC_LINK_EXPIRY });
+
+  // Auto-cleanup expired tokens
+  setTimeout(() => magicTokens.delete(token), MAGIC_LINK_EXPIRY);
+
+  const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const link = `${appUrl}/forge-app.html?token=${token}`;
+
+  const r = getResend();
+  if (r) {
+    try {
+      await r.emails.send({
+        from: process.env.RESEND_FROM || 'Firmz <noreply@firmz.io>',
+        to: email,
+        subject: '⬡ Your Firmz login link',
+        html: `
+<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:40px 24px;background:#07070f;color:#f1f5f9;">
+  <p style="font-size:36px;margin:0 0 16px;">⬡</p>
+  <h1 style="font-size:22px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">Sign in to Firmz</h1>
+  <p style="color:#94a3b8;margin:0 0 28px;">Click the button below — link expires in 15 minutes.</p>
+  <a href="${link}" style="display:inline-block;padding:14px 28px;background:#7c3aed;color:white;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;">Sign in to Firmz →</a>
+  <p style="color:#475569;font-size:12px;margin:24px 0 0;">If you didn't request this, ignore this email.</p>
+</div>`,
+      });
+    } catch (e) {
+      console.error('[auth] Resend error:', e.message);
+    }
+  }
+
+  console.log(`[auth] Magic link for ${email}: ${link}`);
+  const isDev = process.env.NODE_ENV !== 'production';
+  res.json({ sent: true, ...(isDev && { devLink: link }) });
+});
+
+// ── VERIFY MAGIC TOKEN ──
+app.get('/api/auth/verify', (req, res) => {
+  const { token } = req.query;
+  const magic = token && magicTokens.get(token);
+
+  if (!magic || Date.now() > magic.expiresAt) {
+    magicTokens.delete(token);
+    return res.status(401).json({ error: 'Link expired or invalid. Request a new one.' });
+  }
+
+  magicTokens.delete(token); // one-time use
+
+  const sessionKey = generateToken();
+  userSessions.set(sessionKey, { email: magic.email });
+
+  // Give free credits to new users
+  if (!creditBalances.has(magic.email)) {
+    creditBalances.set(magic.email, FREE_CREDITS_ON_SIGNUP);
+  }
+
+  res.json({
+    sessionKey,
+    email: magic.email,
+    credits: creditBalances.get(magic.email),
+  });
+});
+
+// ── SESSION ME ──
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  const email = req.userEmail;
+  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
+  res.json({ email, credits: creditBalances.get(email) });
+});
+
+// ── LOGOUT ──
+app.post('/api/auth/logout', (req, res) => {
+  const key = req.headers['x-session-key'];
+  if (key) userSessions.delete(key);
+  res.json({ ok: true });
+});
+
 // ── CREDIT PACKS ──
 app.get('/api/credits/packs', (req, res) => res.json(CREDIT_PACKS));
 
 // ── CREDIT BALANCE ──
-app.get('/api/credits/balance/:email', (req, res) => {
-  const email = req.params.email.toLowerCase();
-  if (!creditBalances.has(email)) {
-    creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
-  }
+app.get('/api/credits/balance', requireAuth, (req, res) => {
+  const email = req.userEmail;
+  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
   res.json({ email, credits: creditBalances.get(email) });
 });
 
@@ -588,15 +686,16 @@ app.get('/api/stripe/callback', async (req, res) => {
 });
 
 // ── CREATE COMPANY (SSE stream) ──
-app.post('/api/create-company', async (req, res) => {
-  const { idea, name, category = 'B2B SaaS', founderEmail } = req.body;
+app.post('/api/create-company', requireAuth, async (req, res) => {
+  const { idea, name, category = 'B2B SaaS' } = req.body;
+  const founderEmail = req.userEmail; // from authenticated session
 
   if (!idea?.trim() || !name?.trim()) {
     return res.status(400).json({ error: 'idea and name are required' });
   }
 
   // ── CREDIT CHECK ──
-  const email = (founderEmail || '').toLowerCase();
+  const email = founderEmail;
   if (email) {
     if (!creditBalances.has(email)) {
       creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
