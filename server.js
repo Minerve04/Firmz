@@ -111,6 +111,9 @@ app.use(express.json());
 // Serve the frontend files
 app.use(express.static(path.join(__dirname)));
 
+// Root → app
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'forge-app.html')));
+
 // ─────────────────────────────────────────────
 // IN-MEMORY STORE (replace with DB later)
 // ─────────────────────────────────────────────
