@@ -1300,11 +1300,11 @@ body {
     </div>
 
     <div class="sb-footer">
-      <div class="sb-user">
-        <div class="sb-avatar">T</div>
+      <div class="sb-user" onclick="openAccount('screen-dashboard')" style="cursor:pointer;" title="Mon compte">
+        <div class="sb-avatar" id="dash-avatar">?</div>
         <div>
           <div class="sb-uname" id="dash-uname">—</div>
-          <div class="sb-uplan">🔥 3-day streak · Lvl 1</div>
+          <div class="sb-uplan" id="dash-uplan">Mon compte →</div>
         </div>
       </div>
     </div>
@@ -1315,8 +1315,8 @@ body {
       <span class="topbar-title" id="dash-topbar-title">My Company</span>
       <div style="display:flex;gap:10px;align-items:center;">
         <span style="font-size:12px;color:var(--dim);" id="dash-topbar-url"></span>
-        <button class="btn btn-ghost btn-sm">📋 Daily report</button>
         <button class="btn btn-primary btn-sm" onclick="switchTab('chat',null)">💬 Chat CEO</button>
+        <div id="topbar-avatar" onclick="openAccount('screen-dashboard')" title="Mon compte" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--purple2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;cursor:pointer;flex-shrink:0;border:2px solid rgba(167,139,250,.4);transition:opacity .15s;" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">?</div>
       </div>
     </div>
 
@@ -2139,12 +2139,19 @@ function updateCredits() {
     const displayName = userEmail.split('@')[0];
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    const initial = userEmail[0].toUpperCase();
     const av = document.getElementById('home-avatar');
-    if (av) av.textContent = userEmail[0].toUpperCase();
+    if (av) av.textContent = initial;
+    const dashAv = document.getElementById('dash-avatar');
+    if (dashAv) dashAv.textContent = initial;
+    const topbarAv = document.getElementById('topbar-avatar');
+    if (topbarAv) topbarAv.textContent = initial;
     const greetEl = document.getElementById('home-greeting-name');
     if (greetEl) greetEl.textContent = `${greeting}, ${displayName} 👋`;
     const unameEl = document.getElementById('dash-uname');
     if (unameEl) unameEl.textContent = displayName;
+    const uplanEl = document.getElementById('dash-uplan');
+    if (uplanEl) uplanEl.textContent = userEmail;
     const ceoName = document.getElementById('ceo-greeting-name');
     if (ceoName) ceoName.textContent = displayName;
   }
