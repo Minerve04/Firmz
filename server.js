@@ -1341,6 +1341,61 @@ app.get('/api/company/:id/html', async (req, res) => {
   res.send(company.landingHtml || generateLandingHTML(company, company.stripeLinks));
 });
 
+// ── DASHBOARD — real Stripe data ──
+app.get('/api/dashboard/:companyId', requireAuth, async (req, res) => {
+  try {
+    const company = await dbGetCompany(req.params.companyId);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+    if (company.founderEmail !== req.userEmail) return res.status(403).json({ error: 'Forbidden' });
+
+    const result = {
+      name: company.name,
+      emoji: company.emoji,
+      siteUrl: company.siteUrl,
+      stripeConnected: !!company.stripeAccountId,
+      revenue30d: 0,
+      revenueTotal: 0,
+      customers: 0,
+      recentActivity: [],
+    };
+
+    if (company.stripeAccountId) {
+      try {
+        const s = getStripe();
+        const since30d = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+
+        const [charges30d, allCharges] = await Promise.all([
+          s.charges.list({ limit: 50, created: { gte: since30d } }, { stripeAccount: company.stripeAccountId }),
+          s.charges.list({ limit: 100 }, { stripeAccount: company.stripeAccountId }),
+        ]);
+
+        const succeeded30d = charges30d.data.filter(c => c.status === 'succeeded');
+        const succeededAll = allCharges.data.filter(c => c.status === 'succeeded');
+
+        result.revenue30d   = succeeded30d.reduce((s, c) => s + c.amount, 0) / 100;
+        result.revenueTotal = succeededAll.reduce((s, c) => s + c.amount, 0) / 100;
+
+        const emails = new Set(succeededAll.map(c => c.billing_details?.email || c.receipt_email).filter(Boolean));
+        result.customers = emails.size;
+
+        result.recentActivity = succeeded30d.slice(0, 10).map(c => ({
+          amount:   c.amount / 100,
+          currency: c.currency.toUpperCase(),
+          email:    c.billing_details?.email || c.receipt_email || 'customer',
+          date:     new Date(c.created * 1000).toISOString(),
+        }));
+      } catch (stripeErr) {
+        console.error('[dashboard] Stripe error:', stripeErr.message);
+      }
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error('[dashboard error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {

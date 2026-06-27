@@ -1335,23 +1335,23 @@ body {
       <div class="kpi-row">
         <div class="kpi">
           <div class="kpi-label">Revenue (30d)</div>
-          <div class="kpi-val" style="color:var(--dim)">—</div>
-          <div class="kpi-delta" style="color:var(--dim)">Just launched</div>
+          <div class="kpi-val" id="kpi-revenue" style="color:var(--dim)">—</div>
+          <div class="kpi-delta" id="kpi-revenue-delta" style="color:var(--dim)">Loading…</div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Customers</div>
-          <div class="kpi-val" style="color:var(--dim)">—</div>
-          <div class="kpi-delta" style="color:var(--dim)">Agents working</div>
+          <div class="kpi-val" id="kpi-customers" style="color:var(--dim)">—</div>
+          <div class="kpi-delta" id="kpi-customers-delta" style="color:var(--dim)">Loading…</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">Emails sent</div>
-          <div class="kpi-val" style="color:var(--dim)">—</div>
-          <div class="kpi-delta" style="color:var(--dim)">Starting soon</div>
+          <div class="kpi-label">Revenue total</div>
+          <div class="kpi-val" id="kpi-revenue-total" style="color:var(--dim)">—</div>
+          <div class="kpi-delta" style="color:var(--dim)">Since launch</div>
         </div>
         <div class="kpi">
-          <div class="kpi-label">Agent tasks</div>
-          <div class="kpi-val" style="color:var(--dim)">—</div>
-          <div class="kpi-delta" style="color:var(--dim)">Initializing</div>
+          <div class="kpi-label">Stripe</div>
+          <div class="kpi-val" id="kpi-stripe" style="color:var(--dim);font-size:14px;">—</div>
+          <div class="kpi-delta" id="kpi-stripe-delta" style="color:var(--dim)">Not connected</div>
         </div>
       </div>
 
@@ -1359,12 +1359,8 @@ body {
         <div class="card">
           <div class="card-header"><span class="card-title">Recent activity</span><span class="card-action">View all</span></div>
           <div class="card-body">
-            <div class="act-list">
-              <div class="act-item"><div class="act-dot" style="background:rgba(16,185,129,.1)">💰</div><div class="act-body"><div class="act-title">New payment received</div><div class="act-meta">marc@agence.fr · Starter plan</div></div><span class="act-val">+$49</span></div>
-              <div class="act-item"><div class="act-dot" style="background:rgba(124,58,237,.1)">📧</div><div class="act-body"><div class="act-title">Outreach batch sent</div><div class="act-meta">40 emails · 3 replies already</div></div><span class="act-val" style="color:var(--cyan)">+3 leads</span></div>
-              <div class="act-item"><div class="act-dot" style="background:rgba(245,158,11,.1)">📣</div><div class="act-body"><div class="act-title">Meta ad launched</div><div class="act-meta">€15/day · French freelancers</div></div><span class="act-val" style="color:var(--dim)">Live</span></div>
-              <div class="act-item"><div class="act-dot" style="background:rgba(6,182,212,.1)">🌐</div><div class="act-body"><div class="act-title">A/B test launched</div><div class="act-meta">Variant B: +12% early CTR signal</div></div></div>
-              <div class="act-item"><div class="act-dot" style="background:rgba(16,185,129,.1)">💰</div><div class="act-body"><div class="act-title">Payment received</div><div class="act-meta">lea@freelance.io · Pro plan</div></div><span class="act-val">+$99</span></div>
+            <div class="act-list" id="dash-act-list">
+              <div style="padding:20px;text-align:center;color:var(--dim);font-size:13px;">Loading activity…</div>
             </div>
           </div>
         </div>
@@ -1673,7 +1669,80 @@ function goCreateWithIdea() {
   if (val) document.getElementById('idea-textarea').value = val;
   goCreate();
 }
-function goDashboard() { show('screen-dashboard'); buildChart(); startDashFeed(); }
+function goDashboard() { show('screen-dashboard'); buildChart(); startDashFeed(); loadDashboardData(); }
+
+async function loadDashboardData() {
+  if (!currentCompanyId) return;
+  try {
+    const r = await authFetch(API + '/api/dashboard/' + currentCompanyId);
+    if (!r.ok) return;
+    const d = await r.json();
+
+    // KPI — Revenue 30d
+    const revEl = document.getElementById('kpi-revenue');
+    const revDelta = document.getElementById('kpi-revenue-delta');
+    if (revEl) {
+      if (d.stripeConnected) {
+        revEl.textContent = d.revenue30d > 0 ? '$' + d.revenue30d.toFixed(0) : '$0';
+        revEl.style.color = d.revenue30d > 0 ? 'var(--green)' : 'var(--dim)';
+        if (revDelta) revDelta.textContent = d.revenue30d > 0 ? '↑ real data' : 'No payments yet';
+      } else {
+        revEl.textContent = '—';
+        if (revDelta) revDelta.textContent = 'Connect Stripe';
+      }
+    }
+
+    // KPI — Customers
+    const custEl = document.getElementById('kpi-customers');
+    const custDelta = document.getElementById('kpi-customers-delta');
+    if (custEl) {
+      custEl.textContent = d.stripeConnected ? (d.customers || '0') : '—';
+      custEl.style.color = d.customers > 0 ? 'var(--text)' : 'var(--dim)';
+      if (custDelta) custDelta.textContent = d.stripeConnected ? 'Unique payers' : 'Connect Stripe';
+    }
+
+    // KPI — Revenue total
+    const totEl = document.getElementById('kpi-revenue-total');
+    if (totEl) {
+      totEl.textContent = d.stripeConnected ? '$' + (d.revenueTotal || 0).toFixed(0) : '—';
+      totEl.style.color = d.revenueTotal > 0 ? 'var(--green)' : 'var(--dim)';
+    }
+
+    // KPI — Stripe status
+    const strEl = document.getElementById('kpi-stripe');
+    const strDelta = document.getElementById('kpi-stripe-delta');
+    if (strEl) {
+      strEl.textContent = d.stripeConnected ? '✓ Live' : '✗ Off';
+      strEl.style.color = d.stripeConnected ? 'var(--green)' : 'var(--red, #ef4444)';
+      if (strDelta) strDelta.textContent = d.stripeConnected ? 'Payments active' : 'Not connected';
+    }
+
+    // Activity feed
+    const actList = document.getElementById('dash-act-list');
+    if (actList) {
+      if (d.recentActivity && d.recentActivity.length > 0) {
+        actList.innerHTML = d.recentActivity.map(a => {
+          const date = new Date(a.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
+          return `<div class="act-item">
+            <div class="act-dot" style="background:rgba(16,185,129,.1)">💰</div>
+            <div class="act-body">
+              <div class="act-title">Payment received</div>
+              <div class="act-meta">${a.email} · ${date}</div>
+            </div>
+            <span class="act-val" style="color:var(--green)">+${a.currency === 'USD' ? '$' : a.currency + ' '}${a.amount.toFixed(0)}</span>
+          </div>`;
+        }).join('');
+      } else if (d.stripeConnected) {
+        actList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dim);font-size:13px;">🎉 Stripe connected — waiting for your first payment!</div>';
+      } else {
+        actList.innerHTML = '<div style="padding:24px;text-align:center;color:var(--dim);font-size:13px;">Connect Stripe to see real payments here.</div>';
+      }
+    }
+  } catch(e) {
+    if (e.message === 'session_expired') return;
+    console.error('[loadDashboardData]', e);
+  }
+}
 function goSplash() { show('screen-splash'); }
 
 /* ═══════════════ SPLASH TICKER ═══════════════ */
