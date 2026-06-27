@@ -785,19 +785,20 @@ body {
       </div>
     </div>
 
-    <div id="auth-form" style="margin-bottom:12px;">
-      <div style="display:flex;gap:8px;max-width:420px;margin:0 auto;">
-        <input class="input" id="auth-email-input" type="email" placeholder="your@email.com" style="flex:1;" onkeydown="if(event.key==='Enter')sendMagicLink()" />
-        <button class="btn btn-primary btn-lg" onclick="sendMagicLink()" id="auth-send-btn">→</button>
+    <div id="auth-form" style="max-width:420px;margin:0 auto 12px;display:flex;flex-direction:column;gap:8px;">
+      <!-- Toggle -->
+      <div style="display:flex;background:rgba(255,255,255,.06);border-radius:10px;padding:4px;margin-bottom:4px;">
+        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:8px;border:none;border-radius:7px;background:#7c3aed;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Se connecter</button>
+        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:8px;border:none;border-radius:7px;background:transparent;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;">Créer un compte</button>
       </div>
+      <input class="input" id="auth-email-input" type="email" placeholder="votre@email.com" onkeydown="if(event.key==='Enter')document.getElementById('auth-password-input').focus()" />
+      <input class="input" id="auth-password-input" type="password" placeholder="Mot de passe" onkeydown="if(event.key==='Enter')submitAuth()" />
+      <button class="btn btn-primary btn-full btn-lg" onclick="submitAuth()" id="auth-send-btn">Se connecter →</button>
     </div>
-    <div id="auth-sent" style="display:none;margin-bottom:12px;padding:14px 20px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:12px;color:#10b981;font-size:14px;font-weight:600;max-width:420px;margin:0 auto 12px;">
-      ✓ Check your email — magic link sent!<br><span style="font-size:12px;font-weight:400;opacity:.8;">The link expires in 15 minutes.</span>
+    <div id="auth-error" style="display:none;margin-bottom:12px;padding:12px 16px;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:600;max-width:420px;margin:0 auto 12px;">
+      ⚠️ <span id="auth-error-msg">Erreur</span>
     </div>
-    <div id="auth-error" style="display:none;margin-bottom:12px;padding:14px 20px;background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);border-radius:12px;color:#ff6b6b;font-size:14px;font-weight:600;max-width:420px;margin:0 auto 12px;">
-      ⚠️ <span id="auth-error-msg">Link expired.</span> <span style="cursor:pointer;text-decoration:underline;font-weight:700;" onclick="showAuthForm()">Request a new one →</span>
-    </div>
-    <p class="splash-note">Free to start · 3 💎 credits included · No password needed</p>
+    <p class="splash-note">Gratuit · 3 💎 crédits inclus · Sans abonnement</p>
 
     <!-- MINI LEADERBOARD -->
     <div class="splash-lb">
@@ -2069,17 +2070,14 @@ updateCredits();
 // Restore session or show splash
 (async function init() {
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
   const creditsParam = params.get('credits');
 
   // Clean URL without reloading
-  if (token || creditsParam) {
+  if (creditsParam) {
     window.history.replaceState({}, '', window.location.pathname);
   }
 
-  if (token) {
-    await verifyMagicToken(token);
-  } else if (creditsParam === 'success') {
+  if (creditsParam === 'success') {
     // Coming back from Stripe — restore session then show success toast
     if (sessionKey) {
       const ok = await restoreSession();
@@ -2104,65 +2102,52 @@ updateCredits();
   }
 })();
 
-/* ═══════════════ AUTH — MAGIC LINK ═══════════════ */
+/* ═══════════════ AUTH — EMAIL + PASSWORD ═══════════════ */
+let authMode = 'login'; // 'login' | 'signup'
+
 function authHeaders() {
   return { 'Content-Type': 'application/json', 'x-session-key': sessionKey };
 }
 
-async function sendMagicLink() {
-  const email = document.getElementById('auth-email-input')?.value?.trim();
-  if (!email || !email.includes('@')) { alert('Please enter a valid email address.'); return; }
-
-  const btn = document.getElementById('auth-send-btn');
-  if (btn) { btn.textContent = '…'; btn.disabled = true; }
-
-  try {
-    const r = await fetch(API + '/api/auth/send-link', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    const data = await r.json();
-
-    if (data.devLink) {
-      // Dev mode: auto-verify immediately via the link
-      const token = new URL(data.devLink).searchParams.get('token');
-      await verifyMagicToken(token);
-      return;
-    }
-
-    // Production: show "check your email"
-    document.getElementById('auth-form').style.display = 'none';
-    document.getElementById('auth-sent').style.display = 'block';
-  } catch (err) {
-    alert('Error: ' + err.message);
-    if (btn) { btn.textContent = '→'; btn.disabled = false; }
-  }
-}
-
-function showAuthForm() {
-  document.getElementById('auth-form').style.display = 'block';
-  document.getElementById('auth-sent').style.display = 'none';
+function switchAuthTab(mode) {
+  authMode = mode;
+  const isLogin = mode === 'login';
+  document.getElementById('tab-login').style.background = isLogin ? '#7c3aed' : 'transparent';
+  document.getElementById('tab-login').style.color = isLogin ? '#fff' : 'var(--muted)';
+  document.getElementById('tab-signup').style.background = isLogin ? 'transparent' : '#7c3aed';
+  document.getElementById('tab-signup').style.color = isLogin ? 'var(--muted)' : '#fff';
+  document.getElementById('auth-send-btn').textContent = isLogin ? 'Se connecter →' : 'Créer mon compte →';
   document.getElementById('auth-error').style.display = 'none';
 }
 
 function showAuthError(msg) {
-  show('screen-splash');
-  document.getElementById('auth-form').style.display = 'none';
-  document.getElementById('auth-sent').style.display = 'none';
   document.getElementById('auth-error-msg').textContent = msg;
   document.getElementById('auth-error').style.display = 'block';
 }
 
-async function verifyMagicToken(token) {
+async function submitAuth() {
+  const email = document.getElementById('auth-email-input')?.value?.trim();
+  const password = document.getElementById('auth-password-input')?.value || '';
+  if (!email || !email.includes('@')) { showAuthError('Email invalide'); return; }
+  if (!password) { showAuthError('Entre ton mot de passe'); return; }
+
+  const btn = document.getElementById('auth-send-btn');
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
+  document.getElementById('auth-error').style.display = 'none';
+
   try {
-    const r = await fetch(API + '/api/auth/verify?token=' + token);
+    const endpoint = authMode === 'signup' ? '/api/auth/signup' : '/api/auth/login';
+    const r = await fetch(API + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await r.json();
     if (!r.ok) {
-      const d = await r.json().catch(() => ({}));
-      showAuthError(d.error || 'Link expired or already used.');
+      showAuthError(data.error || 'Erreur — réessaie');
+      if (btn) { btn.textContent = authMode === 'login' ? 'Se connecter →' : 'Créer mon compte →'; btn.disabled = false; }
       return;
     }
-    const data = await r.json();
     sessionKey = data.sessionKey;
     userEmail = data.email;
     credits = data.credits;
@@ -2170,11 +2155,10 @@ async function verifyMagicToken(token) {
     localStorage.setItem('firmz_email', userEmail);
     updateCredits();
     show('screen-home');
-    showAchievement('👋', 'Welcome to Firmz!');
-    window.history.replaceState({}, '', '/');
+    showAchievement('👋', authMode === 'signup' ? 'Compte créé ! 3 💎 offerts' : 'Bon retour !');
   } catch (err) {
-    showAuthError('Verification failed. Please try again.');
-    show('screen-splash');
+    showAuthError('Erreur réseau — réessaie');
+    if (btn) { btn.textContent = authMode === 'login' ? 'Se connecter →' : 'Créer mon compte →'; btn.disabled = false; }
   }
 }
 

@@ -40,14 +40,37 @@ function getResend() {
 }
 
 // ─────────────────────────────────────────────
-// AUTH — MAGIC LINK SESSIONS
+// AUTH — EMAIL + PASSWORD
 // ─────────────────────────────────────────────
-const magicTokens = new Map();  // token → { email, expiresAt }
+const users = new Map();        // email → { passwordHash, createdAt }
 const userSessions = new Map(); // sessionKey → { email }
-const MAGIC_LINK_EXPIRY = 15 * 60 * 1000; // 15 min
+const { scrypt, timingSafeEqual } = crypto;
 
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
+}
+
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, 64, (err, hash) => {
+      if (err) reject(err);
+      else resolve(salt + ':' + hash.toString('hex'));
+    });
+  });
+}
+
+async function verifyPassword(password, stored) {
+  const [salt, hash] = stored.split(':');
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, 64, (err, derived) => {
+      if (err) reject(err);
+      else {
+        try { resolve(timingSafeEqual(Buffer.from(hash, 'hex'), derived)); }
+        catch { resolve(false); }
+      }
+    });
+  });
 }
 
 function requireAuth(req, res, next) {
@@ -488,71 +511,41 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ── SEND MAGIC LINK ──
-app.post('/api/auth/send-link', async (req, res) => {
+// ── SIGNUP ──
+app.post('/api/auth/signup', async (req, res) => {
   const email = (req.body.email || '').toLowerCase().trim();
-  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+  const password = req.body.password || '';
+  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Email invalide' });
+  if (password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min)' });
+  if (users.has(email)) return res.status(409).json({ error: 'Ce compte existe déjà — connecte-toi' });
 
-  const token = generateToken();
-  magicTokens.set(token, { email, expiresAt: Date.now() + MAGIC_LINK_EXPIRY });
+  const passwordHash = await hashPassword(password);
+  users.set(email, { passwordHash, createdAt: new Date().toISOString() });
 
-  // Auto-cleanup expired tokens
-  setTimeout(() => magicTokens.delete(token), MAGIC_LINK_EXPIRY);
-
-  const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-  const link = `${appUrl}/forge-app.html?token=${token}`;
-
-  const r = getResend();
-  if (r) {
-    try {
-      await r.emails.send({
-        from: process.env.RESEND_FROM || 'Firmz <noreply@firmz.io>',
-        to: email,
-        subject: '⬡ Your Firmz login link',
-        html: `
-<div style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:40px 24px;background:#07070f;color:#f1f5f9;">
-  <p style="font-size:36px;margin:0 0 16px;">⬡</p>
-  <h1 style="font-size:22px;font-weight:900;margin:0 0 8px;letter-spacing:-0.5px;">Sign in to Firmz</h1>
-  <p style="color:#94a3b8;margin:0 0 28px;">Click the button below — link expires in 15 minutes.</p>
-  <a href="${link}" style="display:inline-block;padding:14px 28px;background:#7c3aed;color:white;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;">Sign in to Firmz →</a>
-  <p style="color:#475569;font-size:12px;margin:24px 0 0;">If you didn't request this, ignore this email.</p>
-</div>`,
-      });
-    } catch (e) {
-      console.error('[auth] Resend error:', e.message);
-    }
-  }
-
-  console.log(`[auth] Magic link for ${email}: ${link}`);
-  const isDev = process.env.NODE_ENV !== 'production';
-  res.json({ sent: true, ...(isDev && { devLink: link }) });
-});
-
-// ── VERIFY MAGIC TOKEN ──
-app.get('/api/auth/verify', (req, res) => {
-  const { token } = req.query;
-  const magic = token && magicTokens.get(token);
-
-  if (!magic || Date.now() > magic.expiresAt) {
-    magicTokens.delete(token);
-    return res.status(401).json({ error: 'Link expired or invalid. Request a new one.' });
-  }
-
-  magicTokens.delete(token); // one-time use
+  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
 
   const sessionKey = generateToken();
-  userSessions.set(sessionKey, { email: magic.email });
+  userSessions.set(sessionKey, { email });
+  console.log(`[auth] New user: ${email}`);
+  res.json({ sessionKey, email, credits: creditBalances.get(email) });
+});
 
-  // Give free credits to new users
-  if (!creditBalances.has(magic.email)) {
-    creditBalances.set(magic.email, FREE_CREDITS_ON_SIGNUP);
-  }
+// ── LOGIN ──
+app.post('/api/auth/login', async (req, res) => {
+  const email = (req.body.email || '').toLowerCase().trim();
+  const password = req.body.password || '';
+  const user = users.get(email);
+  if (!user) return res.status(401).json({ error: 'Compte introuvable — crée un compte' });
 
-  res.json({
-    sessionKey,
-    email: magic.email,
-    credits: creditBalances.get(magic.email),
-  });
+  const ok = await verifyPassword(password, user.passwordHash);
+  if (!ok) return res.status(401).json({ error: 'Mot de passe incorrect' });
+
+  if (!creditBalances.has(email)) creditBalances.set(email, FREE_CREDITS_ON_SIGNUP);
+
+  const sessionKey = generateToken();
+  userSessions.set(sessionKey, { email });
+  console.log(`[auth] Login: ${email}`);
+  res.json({ sessionKey, email, credits: creditBalances.get(email) });
 });
 
 // ── SESSION ME ──
