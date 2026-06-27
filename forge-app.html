@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Firmz — Launch your company. Keep everything you earn.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -31,7 +34,7 @@ html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
   overflow-x: hidden;
   min-height: 100vh;
@@ -143,34 +146,35 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   SCREEN: SPLASH
+   SCREEN: SPLASH — EDITORIAL REDESIGN
 ═══════════════════════════════════════ */
 #screen-splash {
-  align-items: stretch; justify-content: flex-start;
-  background: var(--bg);
-  flex-direction: column;
+  background: var(--bg); flex-direction: column;
 }
 
-/* top nav bar */
+/* Sticky nav */
 .splash-nav {
-  padding: 0 48px; height: 60px;
+  position: sticky; top: 0; z-index: 100;
+  padding: 0 48px; height: 64px;
   display: flex; align-items: center; justify-content: space-between;
+  background: rgba(10,10,10,.88);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.splash-nav-links { display: flex; align-items: center; gap: 6px; }
+.splash-nav-links { display: flex; align-items: center; gap: 8px; }
 
-/* hero section */
+/* Hero — full viewport height */
 .splash-hero {
-  flex: 1; display: flex; flex-direction: column;
+  height: 100vh; min-height: 620px;
+  display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  text-align: center; padding: 80px 24px 60px;
-  max-width: 680px; margin: 0 auto; width: 100%;
+  text-align: center; padding: 0 24px;
 }
 .splash-h1 {
-  font-size: clamp(48px, 8.5vw, 88px);
-  font-weight: 800; letter-spacing: -3px; line-height: 1.0;
-  margin-bottom: 24px;
+  font-size: clamp(60px, 10vw, 112px);
+  font-weight: 900; letter-spacing: -5px; line-height: 0.93;
+  margin-bottom: 32px;
 }
 .grad {
   background: linear-gradient(135deg,#c7d2fe 0%,#818cf8 50%,#c7d2fe 100%);
@@ -180,49 +184,92 @@ body {
 }
 @keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
 .splash-sub {
-  font-size: 17px; color: var(--muted); line-height: 1.75;
-  max-width: 480px; margin: 0 auto 40px;
+  font-size: 18px; color: var(--muted); line-height: 1.7;
+  max-width: 500px; margin: 0 auto 44px; font-weight: 400;
 }
-.splash-cta-row {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  justify-content: center; margin-bottom: 16px;
+.splash-hero-cta {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
 }
 .splash-note {
-  font-size: 12px; color: var(--dim); margin-top: 14px; letter-spacing: .01em;
+  font-size: 12px; color: var(--dim); letter-spacing: .01em;
 }
 
-/* stats row */
-.splash-stats {
-  display: flex; align-items: stretch; border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border); width: 100%;
-  margin: 0;
+/* Stats section */
+.splash-section-stats {
+  display: flex; align-items: stretch;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .splash-stat {
-  flex: 1; padding: 28px 20px; text-align: center;
+  flex: 1; padding: 64px 20px; text-align: center;
   border-right: 1px solid var(--border);
 }
 .splash-stat:last-child { border-right: none; }
 .splash-stat-n {
-  font-size: 28px; font-weight: 800; letter-spacing: -1px;
-  line-height: 1; margin-bottom: 6px;
+  font-size: 44px; font-weight: 900; letter-spacing: -2px;
+  line-height: 1; margin-bottom: 10px;
 }
-.splash-stat-l { font-size: 12px; color: var(--muted); }
+.splash-stat-l { font-size: 13px; color: var(--muted); font-weight: 500; }
 
-/* auth section */
-.splash-auth-wrap {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 60px 24px 80px; width: 100%;
+/* Content sections */
+.splash-section {
+  padding: 120px 40px; max-width: 900px; margin: 0 auto; width: 100%;
 }
-.splash-auth-inner { width: 100%; max-width: 380px; }
-.splash-auth-inner h2 {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
-  margin-bottom: 6px; text-align: center;
+.splash-section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--accent-dim); margin-bottom: 20px;
 }
-.splash-auth-inner .splash-auth-sub {
-  font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 28px;
+.splash-section-title {
+  font-size: clamp(34px, 4.5vw, 56px); font-weight: 900;
+  letter-spacing: -2.5px; line-height: 1.05; margin-bottom: 64px;
+}
+.splash-how-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px;
+}
+.splash-how-num {
+  font-size: 44px; font-weight: 900;
+  color: rgba(255,255,255,.08);
+  letter-spacing: -2px; margin-bottom: 18px; line-height: 1;
+}
+.splash-how-h { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+.splash-how-p { font-size: 14px; color: var(--muted); line-height: 1.75; }
+
+/* Compare cards */
+.splash-compare-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+.splash-compare-card {
+  border: 1px solid var(--border); border-radius: 14px; padding: 36px;
+}
+.splash-compare-card.ours {
+  border-color: rgba(99,102,241,.35); background: rgba(99,102,241,.04);
+}
+.splash-compare-tag {
+  font-size: 11px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 18px;
+}
+.splash-compare-val {
+  font-size: 64px; font-weight: 900; letter-spacing: -4px; line-height: 1;
+  margin-bottom: 12px;
+}
+.splash-compare-card.ours .splash-compare-val { color: var(--accent-dim); }
+.splash-compare-card:not(.ours) .splash-compare-val { color: var(--red); }
+.splash-compare-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+/* Footer CTA */
+.splash-footer-cta {
+  padding: 140px 24px; text-align: center;
+  border-top: 1px solid var(--border);
+}
+.splash-footer-cta h2 {
+  font-size: clamp(40px, 6vw, 72px); font-weight: 900;
+  letter-spacing: -3px; line-height: 0.95; margin-bottom: 24px;
+}
+.splash-footer-cta p {
+  font-size: 16px; color: var(--muted); margin-bottom: 40px;
 }
 
-/* diff bar */
+/* diff bar (inside modal) */
 .diff-bar {
   display: grid; grid-template-columns: 1fr 1fr;
   border: 1px solid var(--border); border-radius: var(--r);
@@ -234,24 +281,62 @@ body {
 .diff-bar-val { font-size: 20px; font-weight: 900; }
 .diff-bar-desc { font-size: 11px; color: var(--dim); margin-top: 3px; }
 
-/* ticker (hidden on splash, used on home) */
+/* ticker / lb — kept hidden (used elsewhere) */
 .fomo-ticker { display: none; }
 .ticker-items { position: absolute; }
 .ticker-item { font-size: 13px; color: var(--muted); padding: 4px 0; white-space: nowrap; }
 .ticker-item strong { color: var(--text); }
 .ticker-item .amount { color: var(--green); font-weight: 700; }
-
-/* leaderboard (on home, not splash) */
-.splash-lb { display: none; }
-.splash-lb-head { display: none; }
-.splash-lb-row { display: none; }
-.lb-rank { display: none; }
+.splash-lb,.splash-lb-head,.splash-lb-row,.lb-rank { display: none; }
 .rank-gold { color: #fbbf24; }
 .rank-silver { color: #94a3b8; }
 .rank-bronze { color: #d97706; }
 .lb-name { flex: 1; font-weight: 600; }
 .lb-meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
 .lb-rev { font-size: 16px; font-weight: 900; color: var(--green); }
+
+/* ── AUTH MODAL ── */
+#auth-modal {
+  display: none; position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  align-items: center; justify-content: center; padding: 24px;
+}
+#auth-modal.open { display: flex; }
+.auth-modal-card {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 18px; padding: 36px; width: 100%; max-width: 400px;
+  position: relative; box-shadow: 0 40px 100px rgba(0,0,0,.7);
+  animation: modalIn .22s cubic-bezier(.22,.68,0,1.2);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+.auth-modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s; font-family: inherit;
+}
+.auth-modal-close:hover { background: rgba(255,255,255,.07); color: var(--text); }
+.auth-modal-logo { font-size: 16px; font-weight: 800; margin-bottom: 24px; color: var(--text); letter-spacing: -0.3px; }
+.auth-modal-h2 {
+  font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+.auth-modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.auth-tab-bar {
+  display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+}
+.auth-tab-bar button {
+  flex: 1; padding: 11px 0; border: none; background: transparent;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  color: var(--muted); border-bottom: 2px solid transparent;
+  margin-bottom: -1px; transition: all .2s; font-family: inherit;
+}
 
 /* ═══════════════════════════════════════
    SCREEN: HOME (logged in)
@@ -850,39 +935,39 @@ body {
 <!-- ═══════════ SPLASH ═══════════ -->
 <div id="screen-splash" class="screen active">
 
-  <!-- NAV -->
+  <!-- NAV (sticky) -->
   <nav class="splash-nav">
     <a class="logo" href="#">Firmz</a>
     <div class="splash-nav-links">
-      <button onclick="switchAuthTab('login');document.getElementById('auth-anchor').scrollIntoView({behavior:'smooth'})" class="btn btn-ghost" style="font-size:13px;padding:9px 18px;">Sign in</button>
-      <button onclick="switchAuthTab('signup');document.getElementById('auth-anchor').scrollIntoView({behavior:'smooth'})" class="btn btn-primary" style="font-size:13px;padding:9px 18px;">Get started free</button>
+      <button onclick="openAuthModal('login')" class="btn btn-ghost" style="font-size:13px;padding:9px 18px;">Sign in</button>
+      <button onclick="openAuthModal('signup')" class="btn btn-primary" style="font-size:13px;padding:9px 18px;">Get started free</button>
     </div>
   </nav>
 
-  <!-- HERO -->
+  <!-- HERO — full viewport -->
   <div class="splash-hero">
     <h1 class="splash-h1">
-      Launch your company.<br>
+      Launch your<br>
+      company.<br>
       <span class="grad">Keep everything</span><br>
       you earn.
     </h1>
-    <p class="splash-sub">Describe your idea. Firmz builds the product, ships the website, runs the ads and emails customers — fully autonomous. 0% commission, always.</p>
-    <div class="splash-cta-row">
-      <button onclick="switchAuthTab('signup');document.getElementById('auth-anchor').scrollIntoView({behavior:'smooth'})" class="btn btn-primary btn-xl">Start for free →</button>
-      <button onclick="switchAuthTab('login');document.getElementById('auth-anchor').scrollIntoView({behavior:'smooth'})" class="btn btn-ghost btn-lg">Sign in</button>
+    <p class="splash-sub">Describe your idea. Firmz builds the product, ships the website, runs the ads — fully autonomous. 0% commission.</p>
+    <div class="splash-hero-cta">
+      <button onclick="openAuthModal('signup')" class="btn btn-primary btn-xl">Start for free →</button>
+      <p class="splash-note">3 credits free · No credit card · 0% commission forever</p>
     </div>
-    <p class="splash-note">3 credits free · No credit card · 0% commission on your revenue</p>
   </div>
 
-  <!-- STATS STRIP -->
-  <div class="splash-stats">
+  <!-- STATS SECTION -->
+  <div class="splash-section-stats">
     <div class="splash-stat">
       <div class="splash-stat-n">8,400+</div>
       <div class="splash-stat-l">companies founded</div>
     </div>
     <div class="splash-stat">
-      <div class="splash-stat-n" style="color:var(--green);">0%</div>
-      <div class="splash-stat-l">commission on revenue</div>
+      <div class="splash-stat-n" style="color:var(--accent-dim);">0%</div>
+      <div class="splash-stat-l">commission taken</div>
     </div>
     <div class="splash-stat">
       <div class="splash-stat-n">$1.2M</div>
@@ -890,62 +975,112 @@ body {
     </div>
   </div>
 
-  <!-- AUTH SECTION -->
-  <div class="splash-auth-wrap" id="auth-anchor">
-    <div class="splash-auth-inner">
-
-      <h2>Create your account</h2>
-      <p class="splash-auth-sub">One idea. One minute. Live forever.</p>
-
-      <!-- Diff bar -->
-      <div class="diff-bar">
-        <div class="diff-bar-item">
-          <div class="diff-bar-label">Others</div>
-          <div class="diff-bar-val" style="color:var(--red);">−20%</div>
-          <div class="diff-bar-desc">cut on every dollar</div>
-        </div>
-        <div class="diff-bar-item">
-          <div class="diff-bar-label">Firmz</div>
-          <div class="diff-bar-val" style="color:var(--green);">0%</div>
-          <div class="diff-bar-desc">you keep it all</div>
-        </div>
+  <!-- HOW IT WORKS -->
+  <div class="splash-section">
+    <div class="splash-section-label">How it works</div>
+    <h2 class="splash-section-title">From idea to revenue<br>in one afternoon.</h2>
+    <div class="splash-how-grid">
+      <div class="splash-how-item">
+        <div class="splash-how-num">01</div>
+        <div class="splash-how-h">Describe your idea</div>
+        <p class="splash-how-p">Type what you want to build. A product, a service, a marketplace — anything. Takes 30 seconds.</p>
       </div>
-
-      <!-- Auth form -->
-      <div id="auth-form">
-        <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;">
-          <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;font-family:inherit;">Sign in</button>
-          <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--text);border-bottom:2px solid var(--text);margin-bottom:-1px;transition:all .2s;font-family:inherit;">Create account</button>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <input class="input" id="auth-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('auth-password-input').focus()" />
-          <input class="input" id="auth-password-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')submitAuth()" />
-          <button class="btn btn-primary btn-full btn-lg" onclick="submitAuth()" id="auth-send-btn" style="margin-top:4px;">Create account →</button>
-          <div id="forgot-link-row" style="text-align:center;padding-top:4px;">
-            <span onclick="showForgotForm()" style="font-size:12px;color:var(--muted);cursor:pointer;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Forgot password?</span>
-          </div>
-        </div>
+      <div class="splash-how-item">
+        <div class="splash-how-num">02</div>
+        <div class="splash-how-h">Firmz builds it</div>
+        <p class="splash-how-p">Your AI team builds the website, sets up payments, writes the landing copy, configures the ads.</p>
       </div>
-
-      <!-- Forgot password -->
-      <div id="forgot-form" style="display:none;flex-direction:column;gap:10px;">
-        <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px;">Enter your email — we'll send a reset link.</p>
-        <input class="input" id="forgot-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendForgot()" />
-        <button class="btn btn-primary btn-full" onclick="sendForgot()" id="forgot-btn">Send reset link →</button>
-        <div style="text-align:center;"><span onclick="showAuthFormLogin()" style="font-size:12px;color:var(--muted);cursor:pointer;">← Back to sign in</span></div>
+      <div class="splash-how-item">
+        <div class="splash-how-num">03</div>
+        <div class="splash-how-h">You keep 100%</div>
+        <p class="splash-how-p">Every dollar your company earns goes to you. Not 80%, not 90%. 100%. We don't take commission.</p>
       </div>
-      <div id="forgot-sent" style="display:none;padding:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;color:#10b981;font-size:13px;font-weight:600;text-align:center;">
-        ✓ If this account exists, you'll receive an email in seconds.<br>
-        <span onclick="showAuthFormLogin()" style="font-size:12px;font-weight:400;cursor:pointer;color:var(--muted);margin-top:6px;display:inline-block;">← Back to sign in</span>
-      </div>
-
-      <div id="auth-error" style="display:none;padding:12px 16px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:600;margin-top:8px;">
-        ⚠️ <span id="auth-error-msg">Error</span>
-      </div>
-
     </div>
   </div>
 
+  <!-- COMPARE -->
+  <div class="splash-section" style="padding-top:0;">
+    <div class="splash-section-label">The honest comparison</div>
+    <h2 class="splash-section-title">Others take 20%<br>of everything you earn.</h2>
+    <div class="splash-compare-grid">
+      <div class="splash-compare-card">
+        <div class="splash-compare-tag">Competitors</div>
+        <div class="splash-compare-val">−20%</div>
+        <p class="splash-compare-desc">Earn $10,000? Keep $8,000. Every month, forever. That's $24,000 gone per year on $120K revenue.</p>
+      </div>
+      <div class="splash-compare-card ours">
+        <div class="splash-compare-tag">Firmz</div>
+        <div class="splash-compare-val">0%</div>
+        <p class="splash-compare-desc">Earn $10,000? Keep $10,000. Your revenue stays yours. That's the whole deal.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER CTA -->
+  <div class="splash-footer-cta">
+    <h2>Your company.<br>Your revenue.</h2>
+    <p>Start in 60 seconds. No credit card. No commission.</p>
+    <button onclick="openAuthModal('signup')" class="btn btn-primary btn-xl">Launch your company →</button>
+  </div>
+
+</div>
+
+<!-- ═══════════ AUTH MODAL ═══════════ -->
+<div id="auth-modal" onclick="closeAuthModalBg(event)">
+  <div class="auth-modal-card">
+    <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+    <div class="auth-modal-logo">Firmz</div>
+    <h2 class="auth-modal-h2">Create your account</h2>
+    <p class="auth-modal-sub">One idea. One minute. Live.</p>
+
+    <!-- Tab bar -->
+    <div class="auth-tab-bar">
+      <button id="tab-login" onclick="switchAuthTab('login')">Sign in</button>
+      <button id="tab-signup" onclick="switchAuthTab('signup')">Create account</button>
+    </div>
+
+    <!-- Diff bar (shown on signup only) -->
+    <div id="modal-diff-bar" class="diff-bar">
+      <div class="diff-bar-item">
+        <div class="diff-bar-label">Others</div>
+        <div class="diff-bar-val" style="color:var(--red);">−20%</div>
+        <div class="diff-bar-desc">cut on every dollar</div>
+      </div>
+      <div class="diff-bar-item">
+        <div class="diff-bar-label">Firmz</div>
+        <div class="diff-bar-val" style="color:var(--green);">0%</div>
+        <div class="diff-bar-desc">you keep it all</div>
+      </div>
+    </div>
+
+    <!-- Auth form -->
+    <div id="auth-form">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <input class="input" id="auth-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('auth-password-input').focus()" />
+        <input class="input" id="auth-password-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')submitAuth()" />
+        <button class="btn btn-primary btn-full btn-lg" onclick="submitAuth()" id="auth-send-btn" style="margin-top:4px;">Create account →</button>
+        <div id="forgot-link-row" style="text-align:center;padding-top:4px;">
+          <span onclick="showForgotForm()" style="font-size:12px;color:var(--muted);cursor:pointer;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Forgot password?</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Forgot password -->
+    <div id="forgot-form" style="display:none;flex-direction:column;gap:10px;">
+      <p style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px;">Enter your email — we'll send a reset link.</p>
+      <input class="input" id="forgot-email-input" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendForgot()" />
+      <button class="btn btn-primary btn-full" onclick="sendForgot()" id="forgot-btn">Send reset link →</button>
+      <div style="text-align:center;"><span onclick="showAuthFormLogin()" style="font-size:12px;color:var(--muted);cursor:pointer;">← Back to sign in</span></div>
+    </div>
+    <div id="forgot-sent" style="display:none;padding:14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;color:#10b981;font-size:13px;font-weight:600;text-align:center;">
+      ✓ If this account exists, you'll receive an email in seconds.<br>
+      <span onclick="showAuthFormLogin()" style="font-size:12px;font-weight:400;cursor:pointer;color:var(--muted);margin-top:6px;display:inline-block;">← Back to sign in</span>
+    </div>
+
+    <div id="auth-error" style="display:none;padding:12px 16px;background:rgba(255,80,80,.08);border:1px solid rgba(255,80,80,.25);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:600;margin-top:8px;">
+      ⚠️ <span id="auth-error-msg">Error</span>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════ RESET PASSWORD ═══════════ -->
@@ -2013,7 +2148,12 @@ async function loadDashboardData() {
     console.error('[loadDashboardData]', e);
   }
 }
-function goSplash() { show('screen-splash'); }
+function goSplash() { closeAuthModal(); show('screen-splash'); }
+
+// Escape key closes modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAuthModal();
+});
 
 /* ═══════════════ SPLASH TICKER ═══════════════ */
 const tickerEvents = [
@@ -3105,6 +3245,25 @@ async function submitReset() {
   }
 }
 
+/* ── Modal open / close ── */
+function openAuthModal(mode) {
+  const modal = document.getElementById('auth-modal');
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  switchAuthTab(mode || 'signup');
+  setTimeout(() => {
+    const el = document.getElementById('auth-email-input');
+    if (el) el.focus();
+  }, 220);
+}
+function closeAuthModal() {
+  document.getElementById('auth-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeAuthModalBg(event) {
+  if (event.target === document.getElementById('auth-modal')) closeAuthModal();
+}
+
 function switchAuthTab(mode) {
   authMode = mode;
   const isLogin = mode === 'login';
@@ -3116,6 +3275,14 @@ function switchAuthTab(mode) {
   ts.style.borderBottomColor = isLogin ? 'transparent' : 'var(--text)';
   document.getElementById('auth-send-btn').textContent = isLogin ? 'Sign in →' : 'Create account →';
   document.getElementById('auth-error').style.display = 'none';
+  // Toggle diff bar
+  const diffBar = document.getElementById('modal-diff-bar');
+  if (diffBar) diffBar.style.display = isLogin ? 'none' : 'grid';
+  // Update heading
+  const h2 = document.querySelector('#auth-modal .auth-modal-h2');
+  const sub = document.querySelector('#auth-modal .auth-modal-sub');
+  if (h2) h2.textContent = isLogin ? 'Welcome back' : 'Create your account';
+  if (sub) sub.textContent = isLogin ? 'Sign in to your Firmz account.' : 'One idea. One minute. Live.';
 }
 
 function showAuthError(msg) {
