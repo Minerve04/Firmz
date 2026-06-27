@@ -1151,14 +1151,21 @@ app.post('/api/create-company', requireAuth, async (req, res) => {
     let deploymentId = null;
 
     if (process.env.VERCEL_TOKEN) {
-      send('log', { msg: '→ Deploying to Vercel (this takes ~10s)…', cls: 'log-info' });
-      const html = generateLandingHTML(company, null); // first deploy without Stripe links
-      const deployment = await deployToVercel(company.slug, html);
-      if (deployment?.url) {
-        siteUrl = deployment.url;
-        deploymentId = deployment.id;
-        send('agent', { id: 'ag-builder', status: 'done', task: `Deployed → ${siteUrl}` });
-        send('log', { msg: `✓ Website live: ${siteUrl}`, cls: 'log-ok' });
+      try {
+        send('log', { msg: '→ Deploying to Vercel (this takes ~10s)…', cls: 'log-info' });
+        const html = generateLandingHTML(company, null); // first deploy without Stripe links
+        const deployment = await deployToVercel(company.slug, html);
+        if (deployment?.url) {
+          siteUrl = deployment.url;
+          deploymentId = deployment.id;
+          send('agent', { id: 'ag-builder', status: 'done', task: `Deployed → ${siteUrl}` });
+          send('log', { msg: `✓ Website live: ${siteUrl}`, cls: 'log-ok' });
+        }
+      } catch (vercelErr) {
+        console.error('[vercel deploy] failed:', vercelErr.message);
+        send('agent', { id: 'ag-builder', status: 'done', task: 'Landing page generated (Vercel token expired — reconnect in Railway)' });
+        send('log', { msg: '⚠ Vercel deploy failed — continuing without live URL', cls: 'log-warn' });
+        send('log', { msg: '○ Regenerate VERCEL_TOKEN in Railway to re-enable deployments', cls: 'log-act' });
       }
     } else {
       send('agent', { id: 'ag-builder', status: 'done', task: 'Landing page generated (add VERCEL_TOKEN to deploy)' });
