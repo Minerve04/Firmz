@@ -339,71 +339,91 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   SCREEN: HOME (logged in)
+   SCREEN: HOME (logged in) — editorial
 ═══════════════════════════════════════ */
-#screen-home {
-  flex-direction: column;
-}
+#screen-home { flex-direction: column; }
 .home-nav {
-  padding: 0 32px; height: 56px; border-bottom: 1px solid var(--border);
+  padding: 0 48px; height: 64px;
   display: flex; align-items: center; justify-content: space-between;
-  background: var(--bg);
-  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,10,10,.88);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
 }
-.home-body { flex: 1; padding: 32px; max-width: 960px; margin: 0 auto; width: 100%; }
+.home-body {
+  flex: 1; padding: 72px 48px 80px;
+  max-width: 860px; margin: 0 auto; width: 100%;
+}
 
 /* greeting */
-.home-greeting h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
-.home-greeting p { font-size: 14px; color: var(--muted); }
+.home-greeting { margin-bottom: 64px; }
+.home-greeting h1 {
+  font-size: clamp(36px, 5vw, 52px); font-weight: 900;
+  letter-spacing: -2px; line-height: 1.05; margin-bottom: 10px;
+}
+.home-greeting p { font-size: 16px; color: var(--muted); font-weight: 400; }
 
-/* streak + level row */
-.home-stats-row {
-  display: flex; gap: 12px; margin: 24px 0; flex-wrap: wrap;
+/* create block */
+.create-cta-block { margin-bottom: 72px; }
+.create-cta-block h2 {
+  font-size: clamp(20px, 3vw, 26px); font-weight: 800;
+  letter-spacing: -0.8px; margin-bottom: 8px;
 }
-.home-stat-pill {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 100px; padding: 8px 16px; font-size: 13px; font-weight: 700;
-}
-.home-stat-pill .pill-icon { font-size: 16px; }
-.home-stat-pill .pill-label { color: var(--muted); font-weight: 400; font-size: 12px; }
-
-/* big create CTA */
-.create-cta-block {
-  background: var(--card);
-  border: 1px solid var(--border2);
-  border-radius: 12px; padding: 28px; margin-bottom: 20px;
-}
-.create-cta-block h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
-.create-cta-block p { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
-.create-cta-row { display: flex; gap: 12px; position: relative; }
+.create-cta-block p { font-size: 15px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+.create-cta-row { display: flex; gap: 12px; }
 .quick-input {
-  flex: 1; padding: 13px 18px;
-  background: rgba(255,255,255,.05); border: 1px solid var(--border2);
-  border-radius: 10px; color: var(--text); font-size: 14px;
-  font-family: inherit; outline: none; transition: border-color .2s;
+  flex: 1; padding: 15px 20px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.10);
+  border-radius: 12px; color: var(--text); font-size: 15px;
+  font-family: inherit; outline: none; transition: border-color .2s, background .2s;
 }
-.quick-input:focus { border-color: var(--accent); }
+.quick-input:focus { border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.06); }
 .quick-input::placeholder { color: var(--dim); }
 
-/* daily challenge */
-.daily-challenge {
-  background: var(--card);
-  border: 1px solid var(--border); border-radius: var(--r);
-  padding: 18px 22px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+/* section label */
+.home-section-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .12em;
+  color: var(--dim); font-weight: 600; margin-bottom: 16px;
 }
-.dc-icon { font-size: 24px; flex-shrink: 0; }
-.dc-content { flex: 1; }
-.dc-label { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
-.dc-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-.dc-bar { height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
-.dc-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .5s; }
-.dc-meta { font-size: 11px; color: var(--dim); margin-top: 6px; }
 
-/* 2-col layout */
-.home-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+/* company cards */
+.home-company-card {
+  display: flex; align-items: center; gap: 18px;
+  padding: 20px 24px;
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
+  border-radius: 14px; cursor: pointer; margin-bottom: 10px;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.home-company-card:hover {
+  background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.13);
+  transform: translateY(-1px);
+}
+.home-company-emoji {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; flex-shrink: 0;
+}
+.home-company-info { flex: 1; min-width: 0; }
+.home-company-name { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 3px; }
+.home-company-tagline { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-company-site {
+  font-size: 12px; color: var(--muted); font-weight: 600;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09);
+  border-radius: 7px; padding: 5px 11px; text-decoration: none; flex-shrink: 0;
+  transition: background .12s;
+}
+.home-company-site:hover { background: rgba(255,255,255,.11); color: var(--text); }
 
-/* achievements */
+/* empty state */
+.home-empty {
+  text-align: center; padding: 64px 24px;
+  border: 1px dashed rgba(255,255,255,.09); border-radius: 16px;
+}
+.home-empty-icon { font-size: 40px; margin-bottom: 16px; }
+.home-empty p { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+/* keep achiev styles for compat */
 .achiev-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; padding: 14px; }
 .achiev-item {
   display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -1173,12 +1193,9 @@ body {
         <span class="gem">💎</span>
         <span id="home-credits">3</span> credits
       </div>
-      <!-- Profile dropdown trigger -->
       <div style="position:relative;">
         <div class="sb-avatar" id="home-avatar" style="width:34px;height:34px;font-size:13px;cursor:pointer;" onclick="toggleProfileMenu(event)" title="Mon compte">T</div>
-        <!-- Dropdown menu -->
-        <div id="profile-menu" style="display:none;position:absolute;top:42px;right:0;width:220px;background:#0e0e1f;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.7);z-index:500;overflow:hidden;">
-          <!-- User info header -->
+        <div id="profile-menu" style="display:none;position:absolute;top:46px;right:0;width:220px;background:#0e0e1f;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.7);z-index:500;overflow:hidden;">
           <div style="padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,.07);">
             <div style="display:flex;align-items:center;gap:10px;">
               <div class="sb-avatar" id="pm-avatar" style="width:36px;height:36px;font-size:15px;pointer-events:none;">T</div>
@@ -1192,132 +1209,59 @@ body {
               <button onclick="closeProfileMenu();openBuyCredits();" style="background:var(--accent);border:none;color:#fff;border-radius:5px;padding:3px 9px;cursor:pointer;font-size:11px;font-weight:600;">+ Recharger</button>
             </div>
           </div>
-          <!-- Menu items -->
           <div style="padding:6px;">
-            <div class="pm-item" onclick="closeProfileMenu();openAccount('screen-home')">
-              <span>👤</span> Mon profil
-            </div>
-            <div class="pm-item" onclick="closeProfileMenu();goCreate()">
-              <span>⚡</span> Créer une société
-            </div>
-            <div class="pm-item" onclick="closeProfileMenu();openBuyCredits()">
-              <span>💎</span> Acheter des crédits
-            </div>
-            <div class="pm-item" onclick="closeProfileMenu();openDailyReport()" id="pm-daily-report" style="display:none;">
-              <span>📊</span> Daily report
-            </div>
+            <div class="pm-item" onclick="closeProfileMenu();openAccount('screen-home')"><span>👤</span> Mon profil</div>
+            <div class="pm-item" onclick="closeProfileMenu();goCreate()"><span>⚡</span> Créer une société</div>
+            <div class="pm-item" onclick="closeProfileMenu();openBuyCredits()"><span>💎</span> Acheter des crédits</div>
+            <div class="pm-item" onclick="closeProfileMenu();openDailyReport()" id="pm-daily-report" style="display:none;"><span>📊</span> Daily report</div>
           </div>
-          <!-- Logout -->
           <div style="padding:6px;border-top:1px solid rgba(255,255,255,.07);">
-            <div class="pm-item pm-item-danger" onclick="closeProfileMenu();logout()">
-              <span>→</span> Déconnexion
-            </div>
+            <div class="pm-item pm-item-danger" onclick="closeProfileMenu();logout()"><span>→</span> Déconnexion</div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
   <div class="home-body">
+
+    <!-- GREETING -->
     <div class="home-greeting">
       <h1 id="home-greeting-name">Good morning 👋</h1>
-      <p>Your company earned <strong style="color:var(--green)">$148</strong> while you slept — and you kept every cent.</p>
+      <p id="home-greeting-sub">What are you building today?</p>
     </div>
 
-    <!-- STREAK + STATS -->
-    <div class="home-stats-row">
-      <div class="home-stat-pill"><span class="pill-icon">🔥</span> <strong>3</strong> <span class="pill-label">day streak</span></div>
-      <div class="home-stat-pill"><span class="pill-icon">⚡</span> <strong>Level 1</strong> <span class="pill-label">Founder</span></div>
-      <div class="home-stat-pill"><span class="pill-icon">💰</span> <strong>$487</strong> <span class="pill-label">total revenue</span></div>
-      <div class="home-stat-pill"><span class="pill-icon">🏆</span> <strong>2/8</strong> <span class="pill-label">achievements</span></div>
-    </div>
-
-    <!-- DAILY CHALLENGE -->
-    <div class="daily-challenge">
-      <div class="dc-icon">🎯</div>
-      <div class="dc-content">
-        <div class="dc-label">Daily challenge</div>
-        <div class="dc-title">Launch your second AI company today</div>
-        <div class="dc-bar"><div class="dc-bar-fill" style="width:0%"></div></div>
-        <div class="dc-meta">Reward: +2 bonus credits 💎💎 · Expires in 14h 32m</div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="goCreate()">Start →</button>
-    </div>
-
-    <!-- MES SOCIÉTÉS -->
-    <div id="home-companies-section" style="margin-bottom:20px;display:none;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;">🏢 Mes sociétés</div>
-        <button onclick="goCreate()" style="background:none;border:none;color:var(--purple2);font-size:12px;font-weight:700;cursor:pointer;padding:0;">+ Nouvelle →</button>
-      </div>
-      <div id="home-companies-list" style="display:flex;flex-direction:column;gap:10px;"></div>
-    </div>
-
-    <!-- CREATE CTA -->
+    <!-- CREATE NEW COMPANY -->
     <div class="create-cta-block">
-      <h2>⚡ Launch a new company</h2>
-      <p>Describe your idea in one sentence. Your company goes live in minutes — with zero commission on what it earns.</p>
+      <h2>Launch a new company</h2>
+      <p>Describe your idea in one sentence — it goes live in minutes, with zero commission on revenue.</p>
       <div class="create-cta-row">
         <input class="quick-input" id="home-idea-input" type="text" placeholder="An AI that writes cold emails for freelancers…" />
-        <button class="btn btn-primary" onclick="goCreateWithIdea()">Forge it →</button>
+        <button class="btn btn-primary" onclick="goCreateWithIdea()">Launch →</button>
       </div>
-      <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;">
         <button class="surprise-btn" style="width:auto;padding:8px 18px;font-size:13px;" onclick="goCreateSurprise()">🎲 Surprise me</button>
         <span style="font-size:12px;color:var(--dim);">Uses <span class="cost-tag">💎 1 credit</span></span>
       </div>
     </div>
 
-    <div class="home-grid">
-      <!-- ACHIEVEMENTS -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🏆 Achievements</span>
-          <span class="card-action">View all</span>
-        </div>
-        <div class="achiev-grid">
-          <div class="achiev-item unlocked">
-            <div class="achiev-check">✓</div>
-            <div class="achiev-icon">🚀</div>
-            <div class="achiev-name">First launch</div>
-          </div>
-          <div class="achiev-item unlocked">
-            <div class="achiev-check">✓</div>
-            <div class="achiev-icon">💰</div>
-            <div class="achiev-name">First $1</div>
-          </div>
-          <div class="achiev-item achiev-locked">
-            <div class="achiev-icon">🏭</div>
-            <div class="achiev-name">2 companies</div>
-          </div>
-          <div class="achiev-item achiev-locked">
-            <div class="achiev-icon">💎</div>
-            <div class="achiev-name">$100 revenue</div>
-          </div>
-          <div class="achiev-item achiev-locked">
-            <div class="achiev-icon">🔥</div>
-            <div class="achiev-name">7-day streak</div>
-          </div>
-          <div class="achiev-item achiev-locked">
-            <div class="achiev-icon">👑</div>
-            <div class="achiev-name">Top earner</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- LIVE FOMO FEED -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title" style="display:flex;align-items:center;gap:8px;"><span class="dot-live"></span> Live floor</span>
-          <span style="font-size:12px;color:var(--dim);">247 companies active</span>
-        </div>
-        <div class="fomo-feed" id="home-fomo-feed">
-          <div class="fomo-item"><span class="fomo-emoji">💰</span><div class="fomo-text"><strong>Nexvora AI</strong> closed a sale</div><span class="fomo-time">2s</span><span class="fomo-amount">+$97</span></div>
-          <div class="fomo-item"><span class="fomo-emoji">📧</span><div class="fomo-text"><strong>Lumio Labs</strong> sent 40 emails</div><span class="fomo-time">14s</span></div>
-          <div class="fomo-item"><span class="fomo-emoji">🚀</span><div class="fomo-text"><strong>Stackify</strong> went live</div><span class="fomo-time">1m</span></div>
-          <div class="fomo-item"><span class="fomo-emoji">💰</span><div class="fomo-text"><strong>Stackify Corp</strong> received payment</div><span class="fomo-time">2m</span><span class="fomo-amount">+$149</span></div>
-          <div class="fomo-item"><span class="fomo-emoji">📣</span><div class="fomo-text"><strong>Creova Studio</strong> launched Meta ad</div><span class="fomo-time">3m</span></div>
-        </div>
+    <!-- MY COMPANIES (real data) -->
+    <div id="home-companies-section" style="display:none;">
+      <div class="home-section-label">Your companies</div>
+      <div id="home-companies-list"></div>
+      <div style="margin-top:20px;">
+        <button onclick="goCreate()" style="background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:0;transition:color .15s;" onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--muted)'">+ Launch another →</button>
       </div>
     </div>
+
+    <!-- EMPTY STATE -->
+    <div id="home-empty-state" style="display:none;">
+      <div class="home-empty">
+        <div class="home-empty-icon">⬡</div>
+        <p>Your first company is one idea away.<br>Type above and launch in minutes.</p>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1721,13 +1665,11 @@ body {
             <div>
               <div class="chat-bubble">
                 Good morning, <span id="ceo-greeting-name">there</span>. Here's today's briefing for <strong id="ceo-company-name">your company</strong>.
-                <div class="report-card">
-                  <div class="report-title">📊 Daily Report — June 27</div>
-                  <div class="report-row"><span class="report-key">Revenue today</span><span class="report-val rv-green">+$148</span></div>
-                  <div class="report-row"><span class="report-key">New customers</span><span class="report-val">3</span></div>
-                  <div class="report-row"><span class="report-key">Emails sent</span><span class="report-val">80</span></div>
-                  <div class="report-row"><span class="report-key">Open rate</span><span class="report-val">21%</span></div>
-                  <div class="report-row"><span class="report-key">Meta CPL</span><span class="report-val">€4.20</span></div>
+                <div class="report-card" id="ceo-report-card">
+                  <div class="report-title" id="ceo-report-title">📊 Daily Report</div>
+                  <div class="report-row"><span class="report-key">Revenue</span><span class="report-val" id="ceo-report-revenue">—</span></div>
+                  <div class="report-row"><span class="report-key">Emails sent</span><span class="report-val" id="ceo-report-emails">—</span></div>
+                  <div class="report-row"><span class="report-key">Open rate</span><span class="report-val" id="ceo-report-open">—</span></div>
                 </div>
               </div>
               <div class="chat-meta">Your AI CEO · 08:00</div>
@@ -2021,22 +1963,38 @@ async function loadHomeCompanies() {
     const d = await r.json();
     const section = document.getElementById('home-companies-section');
     const list = document.getElementById('home-companies-list');
+    const empty = document.getElementById('home-empty-state');
     if (!section || !list) return;
-    if (!d.companies?.length) { section.style.display = 'none'; return; }
+
+    // Update greeting sub-line with real company count
+    const count = d.companies?.length || 0;
+    const greetingSub = document.getElementById('home-greeting-sub');
+    if (greetingSub) {
+      greetingSub.textContent = count === 0
+        ? 'What are you building today?'
+        : count === 1
+          ? '1 company running. Keep everything it earns.'
+          : `${count} companies running. You keep every cent.`;
+    }
+
+    if (!count) {
+      if (section) section.style.display = 'none';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+
+    if (empty) empty.style.display = 'none';
     section.style.display = 'block';
     list.innerHTML = d.companies.map(c => `
-      <div onclick="openCompanyFromHome('${c.id}')"
-        style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:background .12s,border-color .12s;margin-bottom:6px;"
-        onmouseenter="this.style.background='rgba(255,255,255,.06)';this.style.borderColor='rgba(255,255,255,.13)'"
-        onmouseleave="this.style.background='var(--card)';this.style.borderColor='rgba(255,255,255,.07)'">
-        <div style="width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,.07);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${c.emoji || '🏢'}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:14px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
-          <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.tagline || c.category || 'AI Company'}</div>
+      <div class="home-company-card" onclick="openCompanyFromHome('${c.id}')">
+        <div class="home-company-emoji">${c.emoji || '🏢'}</div>
+        <div class="home-company-info">
+          <div class="home-company-name">${c.name}</div>
+          <div class="home-company-tagline">${c.tagline || c.category || 'AI Company'}</div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
-          ${c.siteUrl ? `<a href="${c.siteUrl}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:var(--muted);background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:5px;padding:2px 7px;text-decoration:none;font-weight:600;">↗ Site</a>` : ''}
-          <span style="font-size:11px;color:var(--dim);">Ouvrir →</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          ${c.siteUrl ? `<a href="${c.siteUrl}" target="_blank" onclick="event.stopPropagation()" class="home-company-site">↗ Site</a>` : ''}
+          <span style="font-size:14px;color:var(--dim);">→</span>
         </div>
       </div>
     `).join('');
