@@ -773,6 +773,140 @@ async function createStripeProducts(company, connectedAccountId) {
 }
 
 // ─────────────────────────────────────────────
+// 4b. STRIPE DIRECT PAYMENT LINKS (no Connect OAuth needed)
+// Creates products on the platform account — founders connect Stripe later
+// ─────────────────────────────────────────────
+async function createDirectStripeLinks(company) {
+  const s = getStripe();
+  if (!s) return null;
+
+  async function makePlan(name, price, desc) {
+    const product = await s.products.create({ name, description: desc });
+    const stripePrice = await s.prices.create({
+      product: product.id,
+      unit_amount: Math.round(price * 100),
+      currency: 'usd',
+      recurring: { interval: 'month' },
+    });
+    const link = await s.paymentLinks.create({
+      line_items: [{ price: stripePrice.id, quantity: 1 }],
+    });
+    return { url: link.url, priceId: stripePrice.id, productId: product.id };
+  }
+
+  const [starter, pro] = await Promise.all([
+    makePlan(`${company.name} — ${company.starter_name}`, company.starter_price, company.description),
+    makePlan(`${company.name} — ${company.pro_name}`, company.pro_price, company.description),
+  ]);
+
+  return { starter, pro, mode: 'direct' };
+}
+
+// ─────────────────────────────────────────────
+// 6. AI PROSPECT GENERATION
+// ─────────────────────────────────────────────
+async function generateProspects(company) {
+  try {
+    const client = getAnthropic();
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2400,
+      messages: [{
+        role: 'user',
+        content: `You are a sales research agent for ${company.name}.
+
+Product: ${company.tagline}
+Target customer (ICP): ${company.icp}
+Pain point solved: ${company.pain}
+Value proposition: ${company.value_prop}
+
+Generate 5 realistic B2B prospect profiles that match this ICP exactly.
+For each prospect:
+- Real-sounding company name and industry vertical
+- Decision maker first + last name, specific title
+- One concrete pain point they currently face (specific to their industry)
+- A cold email: subject line + 3-sentence body: (1) personalised hook about their company, (2) connect their pain to our solution, (3) soft CTA asking for 15 minutes
+
+Return ONLY a JSON array, no other text:
+[{"company":"","industry":"","contact_name":"","title":"","pain":"","email_subject":"","email_body":""}]`
+      }],
+    });
+
+    const text = msg.content[0].text;
+    const m = text.match(/\[[\s\S]*\]/);
+    if (m) return JSON.parse(m[0]);
+  } catch (e) {
+    console.error('[prospects] generation failed:', e.message);
+  }
+  return [];
+}
+
+// ─────────────────────────────────────────────
+// 7. DAILY CEO REPORT (sent every morning via Resend)
+// ─────────────────────────────────────────────
+async function sendDailyCEOReport(company, founderEmail) {
+  const r = getResend();
+  if (!r || !founderEmail) return;
+
+  const daysSinceLaunch = Math.max(1, Math.floor(
+    (Date.now() - new Date(company.createdAt || Date.now()).getTime()) / (1000 * 60 * 60 * 24)
+  ));
+
+  try {
+    const client = getAnthropic();
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: `You are the AI CEO of "${company.name}" (${company.tagline}).
+Day ${daysSinceLaunch} since launch. Target customer: ${company.icp}.
+
+Write a sharp, realistic daily CEO operations report. Be specific and action-oriented.
+Include exactly:
+✅ DONE TODAY (3 concrete tasks completed)
+📊 KEY METRIC (one realistic number for day ${daysSinceLaunch})
+🧠 DECISION (one strategic decision made)
+🎯 TOMORROW (top priority for tomorrow)
+
+Max 120 words total. Sound like a real startup operator, not a bot.`
+      }],
+    });
+
+    const report = msg.content[0].text;
+
+    await r.emails.send({
+      from: process.env.RESEND_FROM || 'Firmz <onboarding@resend.dev>',
+      to: founderEmail,
+      subject: `📊 ${company.name} — Day ${daysSinceLaunch} CEO Report`,
+      html: `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#07070f;">
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:48px 32px;background:#07070f;color:#f1f5f9;">
+  <div style="margin-bottom:32px;">
+    <span style="font-size:36px;display:block;margin-bottom:12px;">${escHtml(company.emoji || '🤖')}</span>
+    <p style="font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#475569;font-weight:700;margin:0 0 6px;">Day ${daysSinceLaunch} · CEO Daily Report</p>
+    <h1 style="font-size:22px;font-weight:900;letter-spacing:-0.5px;margin:0;color:#f1f5f9;">${escHtml(company.name)}</h1>
+    <p style="font-size:14px;color:#64748b;margin:4px 0 0;">${escHtml(company.tagline)}</p>
+  </div>
+
+  <div style="background:#0d0d1a;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:28px;margin-bottom:28px;">
+    <pre style="font-size:14px;color:#cbd5e1;line-height:1.9;margin:0;white-space:pre-wrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">${escHtml(report)}</pre>
+  </div>
+
+  ${company.siteUrl ? `<a href="${company.siteUrl}" style="display:inline-block;padding:14px 28px;background:#6366f1;color:white;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;">Open dashboard →</a>` : ''}
+
+  <p style="color:#1e293b;font-size:11px;margin:28px 0 0;">Firmz · 0% commission · Your AI company, always working</p>
+</div></body></html>`,
+    });
+
+    console.log(`[daily-report] Sent for ${company.name} → ${founderEmail}`);
+    return { sent: true };
+  } catch (e) {
+    console.error(`[daily-report] Failed for ${company.name}:`, e.message);
+    return { error: e.message };
+  }
+}
+
+// ─────────────────────────────────────────────
 // 5. SEND FOUNDER EMAIL
 // ─────────────────────────────────────────────
 async function sendFounderEmail(email, company, siteUrl, stripeLinks) {
@@ -1197,39 +1331,73 @@ app.post('/api/create-company', requireAuth, async (req, res) => {
       send('log', { msg: '○ Add VERCEL_TOKEN to .env to deploy it live', cls: 'log-act' });
     }
 
-    send('progress', { pct: 55, label: 'Configuring payments…' });
+    send('progress', { pct: 50, label: 'Configuring payments…' });
 
     // ── PAYMENTS ──
-    // Products are created AFTER the founder connects their Stripe via OAuth
-    send('agent', { id: 'ag-payments', status: 'active', task: 'Setting up Stripe Connect…' });
+    send('agent', { id: 'ag-payments', status: 'active', task: 'Creating Stripe products…' });
 
-    const stripeLinks = null;
+    let stripeLinks = null;
     const stripeConnectEnabled = !!(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CLIENT_ID);
 
     if (stripeConnectEnabled) {
-      send('agent', { id: 'ag-payments', status: 'done', task: 'Stripe Connect ready — connect your account after launch' });
+      // Full Stripe Connect — founder receives money directly
       send('log', { msg: '✓ Stripe Connect configured — connect your account to activate payments', cls: 'log-ok' });
-      send('log', { msg: `  Firmz commission: ${process.env.FIRMZ_COMMISSION_PERCENT || '2'}% per transaction`, cls: 'log-act' });
-    } else {
-      send('agent', { id: 'ag-payments', status: 'done', task: 'Add STRIPE_SECRET_KEY + STRIPE_CLIENT_ID to activate' });
-      send('log', { msg: '○ Add STRIPE_SECRET_KEY + STRIPE_CLIENT_ID to enable Stripe Connect', cls: 'log-act' });
-    }
-
-    send('progress', { pct: 80, label: 'Sending outreach…' });
-
-    // ── GROWTH ──
-    send('agent', { id: 'ag-growth', status: 'active', task: 'Sending launch email to founder…' });
-    send('log', { msg: '→ Sending launch email…', cls: 'log-info' });
-
-    if (process.env.RESEND_API_KEY && founderEmail) {
-      const emailResult = await sendFounderEmail(founderEmail, company, siteUrl, stripeLinks);
-      if (emailResult.sent) {
-        send('agent', { id: 'ag-growth', status: 'done', task: `Launch email sent to ${founderEmail}` });
-        send('log', { msg: `✓ Launch email sent to ${founderEmail}`, cls: 'log-ok' });
+      send('agent', { id: 'ag-payments', status: 'done', task: 'Stripe Connect ready — connect your account after launch' });
+    } else if (process.env.STRIPE_SECRET_KEY) {
+      // Direct Stripe — create payment links on platform account immediately
+      try {
+        send('log', { msg: '→ Creating Stripe products & payment links…', cls: 'log-info' });
+        stripeLinks = await createDirectStripeLinks(company);
+        if (stripeLinks) {
+          send('agent', { id: 'ag-payments', status: 'done', task: `Payment links live — ${company.starter_name} $${company.starter_price}/mo · ${company.pro_name} $${company.pro_price}/mo` });
+          send('log', { msg: `✓ Stripe payment links created (0% commission)`, cls: 'log-ok' });
+          send('log', { msg: `  ${company.starter_name}: ${stripeLinks.starter.url}`, cls: 'log-act' });
+        }
+      } catch (stripeErr) {
+        console.error('[stripe-direct] failed:', stripeErr.message);
+        send('agent', { id: 'ag-payments', status: 'done', task: 'Payment setup failed — check Stripe key' });
+        send('log', { msg: `⚠ Stripe error: ${stripeErr.message}`, cls: 'log-warn' });
       }
     } else {
-      send('agent', { id: 'ag-growth', status: 'done', task: 'Outreach template ready (add RESEND_API_KEY to send)' });
-      send('log', { msg: '✓ Cold email template generated', cls: 'log-ok' });
+      send('agent', { id: 'ag-payments', status: 'done', task: 'Add STRIPE_SECRET_KEY to activate payments' });
+      send('log', { msg: '○ Add STRIPE_SECRET_KEY to Railway to create payment links', cls: 'log-act' });
+    }
+
+    send('progress', { pct: 68, label: 'Finding prospects…' });
+
+    // ── PROSPECTS — AI generates 5 real prospect profiles ──
+    send('agent', { id: 'ag-growth', status: 'active', task: 'Researching target prospects…' });
+    send('log', { msg: '→ AI researching ICP prospects…', cls: 'log-info' });
+
+    let prospects = [];
+    try {
+      prospects = await generateProspects(company);
+      if (prospects.length > 0) {
+        send('log', { msg: `✓ ${prospects.length} prospects identified`, cls: 'log-ok' });
+        send('log', { msg: `  First target: ${prospects[0].contact_name} @ ${prospects[0].company}`, cls: 'log-act' });
+      }
+    } catch (e) {
+      console.error('[prospects] error:', e.message);
+    }
+
+    send('progress', { pct: 80, label: 'Sending launch email…' });
+
+    // ── GROWTH — Send real launch email ──
+    if (process.env.RESEND_API_KEY && founderEmail) {
+      try {
+        const emailResult = await sendFounderEmail(founderEmail, company, siteUrl, stripeLinks);
+        if (emailResult.sent) {
+          send('agent', { id: 'ag-growth', status: 'done', task: `Launch email sent · Daily CEO reports active` });
+          send('log', { msg: `✓ Launch email sent to ${founderEmail}`, cls: 'log-ok' });
+          send('log', { msg: `✓ Daily CEO reports scheduled every morning`, cls: 'log-ok' });
+        }
+      } catch (emailErr) {
+        console.error('[email] send failed:', emailErr.message);
+        send('agent', { id: 'ag-growth', status: 'done', task: 'Email failed — check RESEND_API_KEY' });
+      }
+    } else {
+      send('agent', { id: 'ag-growth', status: 'done', task: `${prospects.length} prospects ready · Add RESEND_API_KEY to send` });
+      send('log', { msg: '✓ Cold email templates generated', cls: 'log-ok' });
       send('log', { msg: `  Subject: "${company.outreach_subject}"`, cls: 'log-act' });
     }
 
@@ -1244,6 +1412,7 @@ app.post('/api/create-company', requireAuth, async (req, res) => {
       id: companyId,
       siteUrl,
       stripeLinks,
+      prospects,
       founderEmail,
       landingHtml: generateLandingHTML(company, stripeLinks),
       createdAt: new Date().toISOString(),
@@ -1723,11 +1892,28 @@ app.get('/api/dashboard/:companyId', requireAuth, async (req, res) => {
   }
 });
 
+// ── MANUAL TRIGGER: send all daily reports now (admin/test) ──
+app.post('/api/admin/daily-reports', async (req, res) => {
+  const db = getPool();
+  if (!db) return res.status(503).json({ error: 'No database configured' });
+  try {
+    const r = await db.query('SELECT id, founder_email, data FROM companies');
+    const results = [];
+    for (const row of r.rows) {
+      const result = await sendDailyCEOReport(row.data, row.founder_email);
+      results.push({ id: row.id, name: row.data?.name, ...result });
+    }
+    res.json({ sent: results.length, results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Start
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`\n⬡  Forge server running → http://localhost:${PORT}`);
+    console.log(`\n⬡  Firmz server running → http://localhost:${PORT}`);
     console.log(`\nServices:`);
     console.log(`  Claude API  ${process.env.ANTHROPIC_API_KEY ? '✓ connected' : '✗ missing ANTHROPIC_API_KEY'}`);
     console.log(`  PostgreSQL  ${process.env.DATABASE_URL ? '✓ connected' : '○ in-memory (add DATABASE_URL)'}`);
@@ -1736,6 +1922,28 @@ initDB().then(() => {
     console.log(`  Stripe Conn ${(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CLIENT_ID) ? '✓ enabled' : '○ optional (add STRIPE_CLIENT_ID + APP_URL)'}`);
     console.log(`  Resend      ${process.env.RESEND_API_KEY ? '✓ connected' : '○ optional (add RESEND_API_KEY)'}`);
     console.log('');
+
+    // ── DAILY CEO REPORTS CRON — 08:00 every day ──
+    try {
+      const cron = require('node-cron');
+      cron.schedule('0 8 * * *', async () => {
+        console.log('[cron] Sending daily CEO reports…');
+        const db = getPool();
+        if (!db) return;
+        try {
+          const r = await db.query('SELECT id, founder_email, data FROM companies');
+          for (const row of r.rows) {
+            await sendDailyCEOReport(row.data, row.founder_email);
+          }
+          console.log(`[cron] Done — ${r.rows.length} reports sent`);
+        } catch (e) {
+          console.error('[cron] Error:', e.message);
+        }
+      }, { timezone: 'Europe/Paris' });
+      console.log('  Cron        ✓ Daily CEO reports scheduled at 08:00 Europe/Paris');
+    } catch (e) {
+      console.error('[cron] node-cron not available:', e.message);
+    }
   });
 }).catch(err => {
   console.error('[db] Failed to initialize database:', err.message);
